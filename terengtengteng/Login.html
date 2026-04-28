@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: white;
+        }
+
+        header {
+            background-color: #1A21A8;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 40px;
+        }
+
+        nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        nav a::after {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 2px;
+            background-color: white;
+            left: 0;
+            bottom: -3px;
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: calc(100vh - 80px);
+        }
+
+        .login-box {
+            background: #d9d9d9;
+            padding: 40px;
+            width: 350px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .login-box h2 {
+            text-align: center;
+            margin: 0 0 10px 0;
+        }
+
+        .input-field {
+            background-color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input-field:focus {
+            background-color: #d5d5d5;
+        }
+
+        .btn-login {
+            background-color: black;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 15px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-login:hover {
+            background-color: #1A21A8
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <img src="logo.png" alt="Logo">
+    </div>
+
+    <nav>
+        <a href="#">Bahasa</a>
+        <a href="#">Butuh Bantuan</a>
+        <a href="#">Tentang Kami</a>
+    </nav>
+</header>
+
+<div class="login-container">
+    <div class="login-box">
+        <h2>Login</h2>
+
+        <input type="text" id="username" class="input-field" placeholder="Username">
+        <input type="password" id="password" class="input-field" placeholder="Password">
+
+        <button class="btn-login" onclick="login()">Konfirmasi</button>
+    </div>
+</div>
+
+<script>
+    function login() {
+        var user = document.getElementById("username").value;
+        var pass = document.getElementById("password").value;
+    
+        if(user === "Ahise" && pass === "erer9i") {
+            window.location.href = "Homepage.html";
+        } else {
+            alert("Username atau Password salah!");
+        }
+    }
+    </script>
+
+</body>
+</html>
