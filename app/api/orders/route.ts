@@ -1,12 +1,10 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { sendEmailNotification, sendWhatsAppNotification } from 'lib/notifications'
 
 // GET - fetch current user's orders
 export async function GET() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
@@ -23,13 +21,11 @@ export async function GET() {
 
 // POST - place an order from current cart
 export async function POST() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
-  // Get user's cart items
   const { data: cartItems, error: cartError } = await supabase
     .from('cart_items')
     .select('*, products(price)')
@@ -40,12 +36,10 @@ export async function POST() {
     return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
   }
 
-  // Calculate total
   const total = cartItems.reduce((sum: number, item: any) => {
     return sum + item.products.price * item.quantity
   }, 0)
 
-  // Create the order
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({ user_id: user.id, total, status: 'pending', payment_status: 'unpaid' })
@@ -54,7 +48,6 @@ export async function POST() {
 
   if (orderError) return NextResponse.json({ error: orderError.message }, { status: 500 })
 
-  // Create order items
   const orderItems = cartItems.map((item: any) => ({
     order_id: order.id,
     product_id: item.product_id,
@@ -68,11 +61,22 @@ export async function POST() {
 
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 })
 
-  // Clear the cart
-  await supabase
-    .from('cart_items')
-    .delete()
-    .eq('user_id', user.id)
+  await supabase.from('cart_items').delete().eq('user_id', user.id)
+
+  // Send notifications
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name, email, phone_number')
+    .eq('id', user.id)
+    .single()
+
+  if (profile) {
+    const message = `Hi ${profile.name}! Your BotaniMart order has been placed. Total: Rp ${total.toLocaleString('id-ID')}.`
+    await sendEmailNotification({ to: profile.email, subject: 'Order Confirmed!', message })
+    if (profile.phone_number) {
+      await sendWhatsAppNotification({ phone: profile.phone_number, message })
+    }
+  }
 
   return NextResponse.json(order, { status: 201 })
 }

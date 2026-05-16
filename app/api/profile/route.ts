@@ -1,13 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import next from 'next'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 // GET - fetch current user's profile
 export async function GET() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
+const supabase = await createClient()   // ← just this
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
@@ -24,9 +20,7 @@ export async function GET() {
 
 // PATCH - update current user's profile
 export async function PATCH(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
+const supabase = await createClient()   // ← just this
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 

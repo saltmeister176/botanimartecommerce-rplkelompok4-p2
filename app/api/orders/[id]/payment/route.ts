@@ -1,12 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 // PATCH - update payment status of an order
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 

@@ -1,12 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 // GET - fetch reviews for a product
 export async function GET(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
+const supabase = await createClient()   // ← just this
   const { searchParams } = new URL(req.url)
   const product_id = searchParams.get('product_id')
 
@@ -27,8 +24,7 @@ export async function GET(req: Request) {
 
 // POST - submit a review
 export async function POST(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
