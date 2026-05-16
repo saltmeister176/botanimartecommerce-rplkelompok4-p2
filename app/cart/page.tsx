@@ -62,7 +62,7 @@ export default function Cart() {
               >
                 <div className="w-24 h-24 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
                   <ImageWithFallback
-                    src={item.product.image}
+                    src={item.product.image_url ?? ''}
                     alt={item.product.name}
                     className="w-full h-full object-cover"
                   />
@@ -75,7 +75,7 @@ export default function Cart() {
                         {item.product.name}
                       </h3>
                       <p className="text-sm text-muted-foreground mb-2">
-                        {item.product.category}
+                        {item.product.category_id}
                       </p>
                       <p className="text-primary">
                         {formatPrice(item.product.price)}
