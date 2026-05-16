@@ -1,9 +1,10 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
-// PATCH - update payment status of an order
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
@@ -14,11 +15,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 })
   }
 
-  // Make sure this order belongs to the user
   const { data: order, error: findError } = await supabase
     .from('orders')
     .select('id')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .single()
 
@@ -26,14 +26,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
 
-  // Update payment status and order status together
   const { data, error } = await supabase
     .from('orders')
     .update({
       payment_status,
       status: payment_status === 'paid' ? 'processing' : 'pending'
     })
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
     .single()
 
