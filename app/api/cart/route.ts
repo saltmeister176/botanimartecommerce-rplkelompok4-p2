@@ -1,18 +1,16 @@
 import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 // GET - fetch current user's cart
 export async function GET() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
   const { data, error } = await supabase
     .from('cart_items')
-    .select('*, products(name, price, image_url)')
+    .select('*, products(name, price, image_url, stock, category_id)')
     .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -22,15 +20,18 @@ export async function GET() {
 
 // POST - add item to cart
 export async function POST(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
   const { product_id, quantity } = await req.json()
 
-  // If item already in cart, increase quantity
+  if (!product_id || !quantity) {
+    return NextResponse.json({ error: 'product_id and quantity are required' }, { status: 400 })
+  }
+
+  // Jika produk sudah ada di cart, tambah quantity
   const { data: existing } = await supabase
     .from('cart_items')
     .select('*')
@@ -59,10 +60,34 @@ export async function POST(req: Request) {
   return NextResponse.json(data, { status: 201 })
 }
 
-// DELETE - remove item from cart
+// PATCH - update quantity item tertentu
+export async function PATCH(req: Request) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+
+  const { cart_item_id, quantity } = await req.json()
+
+  if (!cart_item_id || quantity === undefined) {
+    return NextResponse.json({ error: 'cart_item_id and quantity are required' }, { status: 400 })
+  }
+
+  const { data, error } = await supabase
+    .from('cart_items')
+    .update({ quantity })
+    .eq('id', cart_item_id)
+    .eq('user_id', user.id)
+    .select()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json(data)
+}
+
+// DELETE - remove item dari cart
 export async function DELETE(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })

@@ -1,126 +1,201 @@
+"use client";
 
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Sprout,
+  Wheat,
+  Wrench,
+  FlaskConical,
+  ArrowRight,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 
-export default function Home() {
-  const features = [
-    {
-      icon: "🌱",
-      title: "Direct from Farmers",
-      desc: "No middlemen. Every product goes straight from the farm to your door.",
-    },
-    {
-      icon: "🚚",
-      title: "Same-Day Delivery",
-      desc: "Order before noon and get your fresh produce delivered today.",
-    },
-    {
-      icon: "♻️",
-      title: "Sustainable Packaging",
-      desc: "All packaging is 100% biodegradable and eco-friendly.",
-    },
-  ];
+import ProductCard from "@/app/components/ProductCard";
 
-  const products = [
-    { name: "Organic Tomatoes", price: "Rp 12.000", unit: "/ kg", emoji: "🍅" },
-    { name: "Fresh Spinach", price: "Rp 8.000", unit: "/ bunch", emoji: "🥬" },
-    { name: "Free-Range Eggs", price: "Rp 28.000", unit: "/ dozen", emoji: "🥚" },
-    { name: "Raw Honey", price: "Rp 45.000", unit: "/ jar", emoji: "🍯" },
-    { name: "Red Chili", price: "Rp 15.000", unit: "/ kg", emoji: "🌶️" },
-    { name: "Sweet Corn", price: "Rp 6.000", unit: "/ cob", emoji: "🌽" },
-  ];
+export default function Landing() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then(setProducts);
+
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then(setCategories);
+  }, []);
+
+  const recommendedProducts = products.filter((p) => p.isRecommended);
+  const newProducts = products.filter((p) => p.isNew);
+
+  const categoryIcons = {
+    plant: Sprout,
+    seed: Wheat,
+    wrench: Wrench,
+    flask: FlaskConical,
+  };
 
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-
-      {/* 1. Navigation Bar */}
-      <nav className="flex justify-between items-center px-8 py-5 border-b border-gray-100 shadow-sm sticky top-0 bg-white z-10">
-        <div className="text-2xl font-bold text-green-600">
-          Botani<span className="text-gray-800">Mart</span>
+    <div className="min-h-screen">
+      {/* HERO */}
+      <section className="relative bg-gradient-to-r from-primary via-primary/90 to-secondary text-white py-20 overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 text-6xl">🌱</div>
+          <div className="absolute top-20 right-20 text-5xl">🌿</div>
+          <div className="absolute bottom-10 left-1/4 text-7xl">🌾</div>
+          <div className="absolute bottom-20 right-1/3 text-6xl">🍃</div>
         </div>
-        <div className="flex items-center space-x-8 font-medium">
-          <a href="#catalog" className="hover:text-green-600 transition">Catalog</a>
-          <a href="#" className="hover:text-green-600 transition">Orders</a>
-          <a href="#" className="bg-green-600 text-white px-5 py-2 rounded-full hover:bg-green-700 transition">
-            Cart (0)
-          </a>
-        </div>
-      </nav>
 
-      {/* 2. Hero Banner */}
-      <section className="bg-green-50 px-8 py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <span className="text-green-600 font-semibold text-sm uppercase tracking-widest">
-            🌿 Farm to Table
-          </span>
-          <h1 className="mt-4 text-6xl font-extrabold tracking-tight leading-tight">
-            Fresh products from{" "}
-            <span className="text-green-600">local farmers</span>.
-          </h1>
-          <p className="mt-6 text-xl text-gray-500 max-w-xl mx-auto">
-            Connecting you directly to the source. Simple, fresh, and sustainable.
-          </p>
-          <div className="mt-10 flex justify-center gap-4">
-            <a
-              href="#catalog"
-              className="bg-green-600 text-white px-8 py-3 rounded-full text-lg font-semibold hover:bg-green-700 transition"
-            >
-              Shop Now
-            </a>
-            <a
-              href="#features"
-              className="border border-green-600 text-green-600 px-8 py-3 rounded-full text-lg font-semibold hover:bg-green-50 transition"
-            >
-              Learn More
-            </a>
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="inline-flex items-center space-x-2 bg-accent text-accent-foreground px-4 py-2 rounded-full mb-6">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-sm">Trusted by 10,000+ Farmers</span>
+              </div>
+
+              <h1 className="text-4xl md:text-5xl mb-6">
+                Quality Agricultural Products at Your Fingertips
+              </h1>
+
+              <p className="text-lg mb-8 text-white/90">
+                Discover the best plants, seeds, tools, and fertilizers for your farming needs.
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center space-x-2 bg-accent text-accent-foreground px-6 py-3 rounded-lg"
+                >
+                  <span>Shop Now</span>
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+
+                <Link
+                  href="/products?category=Plants"
+                  className="inline-flex items-center space-x-2 bg-white/20 px-6 py-3 rounded-lg"
+                >
+                  <span>Browse Plants</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="hidden md:block">
+              <div className="bg-white/10 rounded-2xl p-8 text-center border border-white/20">
+                <span className="text-8xl">🌱</span>
+                <p className="mt-4 text-lg">Growing Together</p>
+                <p className="text-sm text-white/70">Since 2026</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Product Grid */}
-      <section id="catalog" className="px-8 py-20 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-2">Today's Catalog</h2>
-        <p className="text-gray-500 mb-10">Freshly harvested and ready to order.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <div
-              key={product.name}
-              className="border border-gray-100 rounded-2xl p-6 hover:shadow-md transition group"
-            >
-              <div className="text-5xl mb-4">{product.emoji}</div>
-              <h3 className="text-lg font-semibold">{product.name}</h3>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-green-600 font-bold text-xl">{product.price}</span>
-                <span className="text-gray-400 text-sm">{product.unit}</span>
-              </div>
-              <button className="mt-4 w-full bg-green-50 text-green-700 py-2 rounded-full font-medium hover:bg-green-100 transition group-hover:bg-green-600 group-hover:text-white">
-                Add to Cart
-              </button>
-            </div>
-          ))}
+      {/* STATS */}
+      <section className="bg-primary/5 py-12">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div>
+            <div className="text-3xl text-primary">10K+</div>
+            <div className="text-sm">Happy Customers</div>
+          </div>
+          <div>
+            <div className="text-3xl text-primary">500+</div>
+            <div className="text-sm">Products</div>
+          </div>
+          <div>
+            <div className="text-3xl text-secondary">4.8★</div>
+            <div className="text-sm">Rating</div>
+          </div>
+          <div>
+            <div className="text-3xl text-secondary">24/7</div>
+            <div className="text-sm">Support</div>
+          </div>
         </div>
       </section>
 
-      {/* 4. Features / About Section */}
-      <section id="features" className="bg-gray-50 px-8 py-20">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-2">Why BotaniMart?</h2>
-          <p className="text-gray-500 mb-14">We're more than just a marketplace.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {features.map((f) => (
-              <div key={f.title} className="bg-white rounded-2xl p-8 shadow-sm">
-                <div className="text-4xl mb-4">{f.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{f.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
-              </div>
+      {/* CATEGORY */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <h2 className="text-3xl text-center mb-12">Browse by Category</h2>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {categories.map((category) => {
+            const Icon = categoryIcons[category.icon as keyof typeof categoryIcons];
+
+            return (
+              <Link
+                key={category.id}
+                href={`/products?category=${category.name}`}
+                className="border rounded-lg p-8 text-center hover:shadow-lg transition"
+              >
+                <div className="mx-auto mb-4">
+                  {Icon && <Icon className="h-8 w-8" />}
+                </div>
+                <h3>{category.name}</h3>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* RECOMMENDED */}
+      <section className="bg-card py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between mb-8">
+            <h2 className="text-3xl flex items-center gap-2">
+              <TrendingUp /> Recommended
+            </h2>
+
+            <Link href="/products" className="text-primary">
+              View All <ArrowRight className="inline w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recommendedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="text-center py-8 text-gray-400 text-sm border-t border-gray-100">
-        © 2025 BotaniMart. All rights reserved.
-      </footer>
+      {/* NEW ARRIVALS */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="flex justify-between mb-8">
+          <h2 className="text-3xl flex items-center gap-2">
+            <Sparkles /> New Arrivals
+          </h2>
 
-    </main>
+          <Link href="/products" className="text-primary">
+            View All <ArrowRight className="inline w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {newProducts.slice(0, 4).map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </section>
+
+      {/* PROMO */}
+      <section className="max-w-7xl mx-auto px-4 py-16">
+        <div className="bg-gradient-to-r from-accent to-accent/70 rounded-2xl p-12 text-center">
+          <h2 className="text-3xl mb-4">Special Promo - 20% OFF</h2>
+          <p className="mb-6">
+            Use code: <b>BOTANI20</b>
+          </p>
+
+          <Link
+            href="/products"
+            className="bg-primary text-white px-6 py-3 rounded-lg"
+          >
+            Shop Now
+          </Link>
+        </div>
+      </section>
+    </div>
   );
 }
