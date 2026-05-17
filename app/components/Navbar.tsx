@@ -14,6 +14,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -73,18 +74,23 @@ export default function Navbar() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
-    setShowUserMenu(false);
+    setShowLogoutConfirm(false);
     router.push('/');
-    router.refresh();
   };
 
   const displayName = profile?.name ?? user?.email ?? '';
 
   return (
+    <>
     <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -222,5 +228,37 @@ export default function Navbar() {
         </form>
       </div>
     </nav>
+
+    {/* Logout Confirmation Modal */}
+    {showLogoutConfirm && (
+      <div className="fixed inset-0 z-100 flex items-center justify-center">
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowLogoutConfirm(false)}
+        />
+        <div className="relative bg-card border border-border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+          <div className="text-center mb-5">
+            <div className="text-4xl mb-3">👋</div>
+            <h3 className="text-lg font-medium text-foreground">Yakin mau logout?</h3>
+            <p className="text-sm text-muted-foreground mt-1">Kamu harus login lagi untuk akses akun.</p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="flex-1 px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors"
+            >
+              Batal
+            </button>
+            <button
+              onClick={confirmLogout}
+              className="flex-1 px-4 py-2 bg-destructive text-white rounded-lg text-sm hover:opacity-90 transition-opacity"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
