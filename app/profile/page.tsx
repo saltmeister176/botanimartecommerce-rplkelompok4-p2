@@ -22,13 +22,11 @@ export default function Profile() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const res = await fetch("/api/profile");
+      if (res.status === 401) {
         router.push("/login");
         return;
       }
-
-      const res = await fetch("/api/profile");
       if (res.ok) {
         const data = await res.json();
         setProfile(data);
