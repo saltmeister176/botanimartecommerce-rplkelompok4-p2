@@ -55,43 +55,35 @@ export default function LoginPage() {
           return;
         }
 
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
+        // Login langsung via client agar session langsung ter-set di browser
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
         });
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          toast.error(data.error || "Email atau password salah");
+        if (error) {
+          toast.error("Email atau password salah");
           return;
         }
 
-        // Cek role dari tabel profiles (bukan is_admin)
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single();
+        // Ambil role dari profiles
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .single();
 
-          toast.success("Login berhasil! Mengalihkan...");
+        toast.success("Login berhasil! Mengalihkan...");
 
-          // Tunggu sebentar agar toast tampil, lalu redirect
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+        // Tunggu sebentar agar toast tampil, lalu redirect
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
-          if (profile?.role === "admin") {
-            router.push("/admin");
-          } else if (profile?.role === "store_manager") {
-            router.push("/store-manager");
-          } else {
-            router.push("/");
-          }
+        if (profile?.role === "admin") {
+          router.push("/admin");
+        } else if (profile?.role === "store_manager") {
+          router.push("/store-manager");
+        } else {
+          router.push("/");
         }
       }
     } finally {
