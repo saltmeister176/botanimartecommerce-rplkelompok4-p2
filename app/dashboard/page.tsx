@@ -95,7 +95,6 @@ export default function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
     await supabase.auth.signOut();
     toast.success("Berhasil logout");
     router.push("/");
