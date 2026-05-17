@@ -72,9 +72,17 @@ export async function POST() {
 
   if (profile) {
     const message = `Hi ${profile.name}! Your BotaniMart order has been placed. Total: Rp ${total.toLocaleString('id-ID')}.`
-    await sendEmailNotification({ to: profile.email, subject: 'Order Confirmed!', message })
+    try {
+      await sendEmailNotification({ to: profile.email, subject: 'Order Confirmed!', message })
+    } catch (e) {
+      console.error('Email notification failed:', e)
+    }
     if (profile.phone_number) {
-      await sendWhatsAppNotification({ phone: profile.phone_number, message })
+      try {
+        await sendWhatsAppNotification({ phone: profile.phone_number, message })
+      } catch (e) {
+        console.error('WhatsApp notification failed:', e)
+      }
     }
   }
 
