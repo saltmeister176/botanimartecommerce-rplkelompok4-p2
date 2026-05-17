@@ -22,20 +22,23 @@ export default function Profile() {
 
   useEffect(() => {
     const init = async () => {
-      const res = await fetch("/api/profile");
-      if (res.status === 401) {
-        router.push("/login");
-        return;
+      try {
+        const res = await fetch("/api/profile");
+        if (res.status === 401) {
+          router.push("/login");
+          return;
+        }
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data);
+          setFormData({
+            name: data.name || "",
+            phone_number: data.phone_number || "",
+          });
+        }
+      } finally {
+        setLoading(false);
       }
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data);
-        setFormData({
-          name: data.name || "",
-          phone_number: data.phone_number || "",
-        });
-      }
-      setLoading(false);
     };
 
     init();

@@ -64,31 +64,33 @@ export default function Dashboard() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/login");
-        return;
+        if (!user) {
+          router.push("/login");
+          return;
+        }
+
+        setUser(user);
+
+        // Fetch profile
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        setProfile(profileData);
+
+        // Fetch orders
+        const res = await fetch("/api/orders");
+        if (res.ok) {
+          const ordersData = await res.json();
+          setOrders(ordersData);
+        }
+      } finally {
+        setLoading(false);
       }
-
-      setUser(user);
-
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      setProfile(profileData);
-
-      // Fetch orders
-      const res = await fetch("/api/orders");
-      if (res.ok) {
-        const ordersData = await res.json();
-        setOrders(ordersData);
-      }
-
-      setLoading(false);
     };
 
     init();
