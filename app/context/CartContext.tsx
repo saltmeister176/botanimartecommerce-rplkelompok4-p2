@@ -83,10 +83,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const addToCart = async (product: CartProduct) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Optimistic update
+    // Optimistic update dulu
     setCart((prev) => {
       const existing = prev.find((i) => i.product_id === product.id);
       if (existing) {
@@ -111,11 +108,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: product.id, quantity: 1 }),
       });
-      if (!res.ok) {
-        await refreshCart(); // rollback jika gagal
-      } else {
-        await refreshCart(); // sync ID yang beneran dari DB
+
+      if (res.status === 401) {
+        // Belum login - rollback optimistic update
+        await refreshCart();
+        return;
       }
+
+      // Sync dengan data real dari DB (dapat ID yang benar)
+      await refreshCart();
     } catch {
       await refreshCart();
     }
