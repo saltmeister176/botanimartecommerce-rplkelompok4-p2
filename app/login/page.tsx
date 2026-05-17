@@ -62,7 +62,13 @@ export default function LoginPage() {
         });
 
         if (error) {
-          toast.error("Email atau password salah");
+          if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+            toast.error("Email belum dikonfirmasi. Cek inbox kamu dan klik link verifikasi.");
+          } else if (error.message.includes('Invalid login credentials')) {
+            toast.error("Email atau password salah.");
+          } else {
+            toast.error(error.message);
+          }
           return;
         }
 
