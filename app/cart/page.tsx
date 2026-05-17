@@ -83,7 +83,7 @@ export default function Cart() {
                     </div>
 
                     <button
-                      onClick={() => removeFromCart(item.product.id)}
+                      onClick={() => removeFromCart(item.id)}
                       className="text-destructive hover:bg-destructive/10 p-2 rounded-lg h-fit"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -93,7 +93,7 @@ export default function Cart() {
                   <div className="flex items-center space-x-3 mt-4">
                     <button
                       onClick={() =>
-                        updateQuantity(item.product.id, item.quantity - 1)
+                        updateQuantity(item.id, item.quantity - 1)
                       }
                       className="p-2 border border-border rounded-lg hover:bg-muted"
                     >
@@ -106,7 +106,7 @@ export default function Cart() {
 
                     <button
                       onClick={() =>
-                        updateQuantity(item.product.id, item.quantity + 1)
+                        updateQuantity(item.id, item.quantity + 1)
                       }
                       className="p-2 border border-border rounded-lg hover:bg-muted"
                       disabled={item.quantity >= item.product.stock}
