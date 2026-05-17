@@ -60,7 +60,7 @@ export default function Cart() {
                 key={item.product.id}
                 className="bg-card border border-border rounded-lg p-6 flex gap-6"
               >
-                <div className="w-24 h-24 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
+                <div className="w-24 h-24 shrink-0 bg-muted rounded-lg overflow-hidden">
                   <ImageWithFallback
                     src={item.product.image_url ?? ''}
                     alt={item.product.name}

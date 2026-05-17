@@ -80,7 +80,10 @@ export default function LoginPage() {
             .eq("id", user.id)
             .single();
 
-          toast.success("Login berhasil!");
+          toast.success("Login berhasil! Mengalihkan...");
+
+          // Tunggu sebentar agar toast tampil, lalu redirect
+          await new Promise((resolve) => setTimeout(resolve, 1500));
 
           if (profile?.role === "admin") {
             router.push("/admin");
@@ -89,7 +92,6 @@ export default function LoginPage() {
           } else {
             router.push("/");
           }
-          router.refresh();
         }
       }
     } finally {
