@@ -8,14 +8,32 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
-  const { data, error } = await supabase
+  // Ambil cart items dulu
+  const { data: cartItems, error } = await supabase
     .from('cart_items')
-    .select('*, products(name, price, image_url, stock, category_id)')
+    .select('*')
     .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!cartItems || cartItems.length === 0) return NextResponse.json([])
 
-  return NextResponse.json(data)
+  // Ambil product detail secara manual (in case FK belum terdefinisi di DB)
+  const productIds = cartItems.map((item: any) => item.product_id)
+  const { data: products, error: productError } = await supabase
+    .from('products')
+    .select('id, name, price, image_url, stock, category_id')
+    .in('id', productIds)
+
+  if (productError) return NextResponse.json({ error: productError.message }, { status: 500 })
+
+  // Gabungkan manual
+  const productMap = Object.fromEntries((products ?? []).map((p: any) => [p.id, p]))
+  const result = cartItems.map((item: any) => ({
+    ...item,
+    products: productMap[item.product_id] ?? null,
+  }))
+
+  return NextResponse.json(result)
 }
 
 // POST - add item to cart
