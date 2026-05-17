@@ -28,10 +28,17 @@ export default function Landing() {
       .then(setCategories);
   }, []);
 
-  const recommendedProducts = products.filter((p) => p.isRecommended);
-  const newProducts = products.filter((p) => p.isNew);
+  // Gunakan field dari Supabase: is_recommended & is_new
+  // Kalau kolom belum ada di DB, fallback ke semua produk (slice untuk batasi tampilan)
+  const recommendedProducts = products.filter((p) => p.is_recommended).length > 0
+    ? products.filter((p) => p.is_recommended)
+    : products.slice(0, 4);
 
-  const categoryIcons = {
+  const newProducts = products.filter((p) => p.is_new).length > 0
+    ? products.filter((p) => p.is_new)
+    : products.slice(0, 4);
+
+  const categoryIcons: Record<string, React.ElementType> = {
     plant: Sprout,
     seed: Wheat,
     wrench: Wrench,
@@ -41,7 +48,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen">
       {/* HERO */}
-      <section className="relative bg-gradient-to-r from-primary via-primary/90 to-secondary text-white py-20 overflow-hidden">
+      <section className="relative bg-linear-to-r from-primary via-primary/90 to-secondary text-white py-20 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 left-10 text-6xl">🌱</div>
           <div className="absolute top-20 right-20 text-5xl">🌿</div>
@@ -122,7 +129,7 @@ export default function Landing() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {categories.map((category) => {
-            const Icon = categoryIcons[category.icon as keyof typeof categoryIcons];
+            const Icon = categoryIcons[category.icon];
 
             return (
               <Link
@@ -141,11 +148,34 @@ export default function Landing() {
       </section>
 
       {/* RECOMMENDED */}
-      <section className="bg-card py-16">
-        <div className="max-w-7xl mx-auto px-4">
+      {recommendedProducts.length > 0 && (
+        <section className="bg-card py-16">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex justify-between mb-8">
+              <h2 className="text-3xl flex items-center gap-2">
+                <TrendingUp /> Recommended
+              </h2>
+
+              <Link href="/products" className="text-primary">
+                View All <ArrowRight className="inline w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recommendedProducts.slice(0, 4).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* NEW ARRIVALS */}
+      {newProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-16">
           <div className="flex justify-between mb-8">
             <h2 className="text-3xl flex items-center gap-2">
-              <TrendingUp /> Recommended
+              <Sparkles /> New Arrivals
             </h2>
 
             <Link href="/products" className="text-primary">
@@ -154,35 +184,16 @@ export default function Landing() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {recommendedProducts.map((product) => (
+            {newProducts.slice(0, 4).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* NEW ARRIVALS */}
-      <section className="max-w-7xl mx-auto px-4 py-16">
-        <div className="flex justify-between mb-8">
-          <h2 className="text-3xl flex items-center gap-2">
-            <Sparkles /> New Arrivals
-          </h2>
-
-          <Link href="/products" className="text-primary">
-            View All <ArrowRight className="inline w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {newProducts.slice(0, 4).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* PROMO */}
       <section className="max-w-7xl mx-auto px-4 py-16">
-        <div className="bg-gradient-to-r from-accent to-accent/70 rounded-2xl p-12 text-center">
+        <div className="bg-linear-to-r from-accent to-accent/70 rounded-2xl p-12 text-center">
           <h2 className="text-3xl mb-4">Special Promo - 20% OFF</h2>
           <p className="mb-6">
             Use code: <b>BOTANI20</b>

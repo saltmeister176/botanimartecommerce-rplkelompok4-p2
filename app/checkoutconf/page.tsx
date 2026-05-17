@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { MessageCircle, CheckCircle } from "lucide-react";
-import { formatPrice } from "@/app/data/mockData";
+import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/app/context/CartContext";
 import { useEffect, useState } from "react";
 

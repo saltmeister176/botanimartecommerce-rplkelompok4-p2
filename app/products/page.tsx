@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SlidersHorizontal } from "lucide-react";
 import ProductCard from "@/app/components/ProductCard";
 
-export default function Products() {
+// useSearchParams() harus dibungkus Suspense di Next.js 14+
+// kalau tidak, build Vercel akan error
+function ProductsContent() {
   const searchParams = useSearchParams();
 
   const [products, setProducts] = useState<any[]>([]);
@@ -62,7 +64,6 @@ export default function Products() {
             <span>/</span>
             <span>Produk</span>
           </div>
-
           <h1 className="text-3xl mb-2">Katalog Produk</h1>
           <p className="text-primary-foreground/80">
             Jelajahi berbagai produk pertanian berkualitas
@@ -175,14 +176,12 @@ export default function Products() {
                 <div className="bg-muted/30 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4">
                   <span className="text-4xl">🔍</span>
                 </div>
-
                 <p className="text-lg text-foreground mb-2">
                   Produk Tidak Ditemukan
                 </p>
                 <p className="text-muted-foreground mb-6">
                   Coba ubah filter atau kata kunci pencarian Anda
                 </p>
-
                 <button
                   onClick={() => {
                     setSelectedCategory("All");
@@ -198,5 +197,17 @@ export default function Products() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Products() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Memuat produk...</p>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }

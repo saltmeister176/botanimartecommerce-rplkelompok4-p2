@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
-import { formatPrice } from "@/app/data/mockData";
+import { formatPrice } from "@/lib/utils";
 import { ImageWithFallback } from "@/app/components/ImageWithFallback";
 
 export default function Cart() {

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, Home, ShoppingBag } from "lucide-react";
-import { formatPrice } from "@/app/data/mockData";
+import { formatPrice } from "@/lib/utils";
 
 export default function PaymentSuccess() {
   const router = useRouter();

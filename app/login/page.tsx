@@ -49,7 +49,6 @@ export default function LoginPage() {
 
         toast.success("Akun berhasil dibuat! Cek email untuk konfirmasi.");
         setIsRegister(false);
-
       } else {
         if (!formData.email || !formData.password) {
           toast.error("Email dan password wajib diisi");
@@ -72,19 +71,21 @@ export default function LoginPage() {
           return;
         }
 
-        // Cek apakah user adalah admin
+        // Cek role dari tabel profiles (bukan is_admin)
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("is_admin")
+            .select("role")
             .eq("id", user.id)
             .single();
 
           toast.success("Login berhasil!");
 
-          if (profile?.is_admin) {
+          if (profile?.role === "admin") {
             router.push("/admin");
+          } else if (profile?.role === "store_manager") {
+            router.push("/store-manager");
           } else {
             router.push("/");
           }

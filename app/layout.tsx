@@ -28,14 +28,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <CartProvider>
           <WishlistProvider>
             <div className="min-h-screen flex flex-col">
               <Navbar />
-              <main className="flex-1">
-                {children}
-              </main>
+              <main className="flex-1">{children}</main>
               <Toaster richColors position="top-right" />
             </div>
           </WishlistProvider>

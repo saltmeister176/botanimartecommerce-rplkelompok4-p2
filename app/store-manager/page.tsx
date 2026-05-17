@@ -1,7 +1,6 @@
 "use client";
 export const dynamic = 'force-dynamic'
 
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -15,12 +14,13 @@ import {
   DollarSign,
 } from "lucide-react";
 import {
-  orders as initialOrders,
   formatPrice,
   formatDate,
   getStatusColor,
   getStatusLabel,
-} from "@/app/data/mockData";
+  type OrderStatus,
+} from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 type Tab = "dashboard" | "orders" | "stock";
@@ -29,42 +29,90 @@ export default function StoreManager() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [user, setUser] = useState<any>(null);
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
+  // ── Auth check via Supabase (bukan localStorage) ──────────
   useEffect(() => {
-    const userData = localStorage.getItem("user");
+    const supabase = createClient();
 
-    if (!userData) {
-      router.push("/login");
-      return;
-    }
+    const checkUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    const parsed = JSON.parse(userData);
+      if (!authUser) {
+        router.push("/login");
+        return;
+      }
 
-    if (parsed.role !== "store_manager" && parsed.phone !== "manager") {
-      router.push("/dashboard");
-    } else {
-      setUser(parsed);
-    }
+      // Ambil role dari tabel profiles
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, name")
+        .eq("id", authUser.id)
+        .single();
+
+      if (!profile || profile.role !== "store_manager") {
+        router.push("/dashboard");
+        return;
+      }
+
+      setUser({ ...authUser, ...profile });
+    };
+
+    checkUser();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
+  // ── Fetch orders dari API ─────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/orders");
+        if (res.ok) {
+          const data = await res.json();
+          setOrders(data);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.push("/");
   };
 
-  const handleVerifyPayment = (orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, status: "processing" as const } : o
-      )
-    );
-    toast.success("Payment verified! Order moved to processing.");
-    setSelectedOrder(null);
+  const handleVerifyPayment = async (orderId: string) => {
+    const res = await fetch(`/api/orders/${orderId}/payment`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payment_status: "paid" }),
+    });
+
+    if (res.ok) {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? { ...o, payment_status: "paid", status: "processing" }
+            : o
+        )
+      );
+      toast.success("Payment verified! Order moved to processing.");
+      setSelectedOrder(null);
+    } else {
+      toast.error("Failed to verify payment.");
+    }
   };
 
-  const handleUpdateStatus = (orderId: string, newStatus: any) => {
+  const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
+    // Optimistic update — extend dengan API call jika ada endpoint-nya
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     );
@@ -75,12 +123,11 @@ export default function StoreManager() {
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const verificationOrders = orders.filter(
-    (o) => o.status === "payment_verification"
+    (o) => o.payment_status === "unpaid" && o.status !== "cancelled"
   ).length;
   const processingOrders = orders.filter(
     (o) => o.status === "processing"
   ).length;
-
   const totalRevenue = orders
     .filter((o) => o.status === "completed")
     .reduce((sum, o) => sum + o.total, 0);
@@ -91,6 +138,7 @@ export default function StoreManager() {
       <aside className="w-64 border-r flex flex-col">
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold">Store Manager</h2>
+          <p className="text-sm text-muted-foreground mt-1">{user.name}</p>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -132,9 +180,7 @@ export default function StoreManager() {
 
       {/* MAIN */}
       <main className="flex-1 p-8">
-        <h1 className="text-2xl font-bold capitalize mb-6">
-          {activeTab}
-        </h1>
+        <h1 className="text-2xl font-bold capitalize mb-6">{activeTab}</h1>
 
         {activeTab === "dashboard" && (
           <div className="grid md:grid-cols-4 gap-6">
@@ -151,16 +197,21 @@ export default function StoreManager() {
 
         {activeTab === "orders" && (
           <div className="mt-6 space-y-4">
+            {loading && <p className="text-muted-foreground">Loading orders...</p>}
+            {!loading && orders.length === 0 && (
+              <p className="text-muted-foreground">No orders yet.</p>
+            )}
             {orders.map((order) => (
               <div
                 key={order.id}
                 className="border p-4 rounded flex justify-between items-center"
               >
                 <div>
-                  <p className="font-semibold">{order.customerName}</p>
+                  <p className="font-semibold">Order #{order.id.slice(0, 8)}</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(order.date)}
+                    {formatDate(order.created_at)}
                   </p>
+                  <p className="text-sm">{formatPrice(order.total)}</p>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -179,6 +230,15 @@ export default function StoreManager() {
                     <Eye size={16} />
                     View
                   </button>
+
+                  {order.payment_status === "unpaid" && order.status !== "cancelled" && (
+                    <button
+                      onClick={() => handleVerifyPayment(order.id)}
+                      className="text-sm bg-secondary/10 text-secondary px-3 py-1 rounded hover:bg-secondary/20"
+                    >
+                      Verify Payment
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

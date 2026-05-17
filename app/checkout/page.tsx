@@ -10,7 +10,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
-import { formatPrice, paymentMethods } from "@/app/data/mockData";
+import { formatPrice, paymentMethods } from "@/lib/utils";
 
 export default function Checkout() {
   const { cart, getCartTotal } = useCart();

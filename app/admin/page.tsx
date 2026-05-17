@@ -8,7 +8,8 @@ import {
   LayoutDashboard, Package, Users, Activity,
   Image as ImageIcon, LogOut, Trash2, DollarSign, ShoppingCart,
 } from "lucide-react";
-import { formatPrice, formatDate } from "@/app/data/mockData";
+import { formatPrice, formatDate } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 type Tab = "dashboard" | "products" | "users" | "logs" | "content";
@@ -21,27 +22,50 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
 
+  // ── Auth check via Supabase (bukan localStorage) ──────────
   useEffect(() => {
-    fetch('/api/products').then(r => r.json()).then(setProducts)
-    fetch('/api/orders').then(r => r.json()).then(setOrders)
-  }, [])
+    const supabase = createClient();
 
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (!userData) { router.push("/login"); return; }
-    const parsed = JSON.parse(userData);
-    if (parsed.role !== "admin") { router.push("/dashboard"); }
-    else { setUser(parsed); }
+    const checkUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (!authUser) {
+        router.push("/login");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, name")
+        .eq("id", authUser.id)
+        .single();
+
+      if (!profile || profile.role !== "admin") {
+        router.push("/dashboard");
+        return;
+      }
+
+      setUser({ ...authUser, ...profile });
+    };
+
+    checkUser();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/products').then(r => r.json()).then(setProducts);
+    fetch('/api/orders').then(r => r.json()).then(setOrders);
+  }, [user]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
     router.push("/");
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (confirm("Delete this product?")) {
-      await fetch(`/api/products/${id}`, { method: 'DELETE' })
+      await fetch(`/api/products/${id}`, { method: 'DELETE' });
       setProducts(products.filter((p) => p.id !== id));
       toast.success("Product deleted");
     }
@@ -54,7 +78,7 @@ export default function AdminPage() {
     .reduce((sum: number, o: any) => sum + o.total, 0);
 
   const pendingOrders = orders.filter(
-    (o) => o.status === "pending" || o.status === "payment_verification"
+    (o) => o.status === "pending" || o.payment_status === "unpaid"
   ).length;
 
   const menuItems = [
@@ -67,7 +91,10 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen flex bg-background">
       <aside className="w-64 border-r flex flex-col">
-        <div className="p-6 border-b">🌿 Admin Panel</div>
+        <div className="p-6 border-b">
+          <p>🌿 Admin Panel</p>
+          <p className="text-sm text-muted-foreground mt-1">{user.name}</p>
+        </div>
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { QrCode, Building2, Upload, CheckCircle, ArrowLeft } from "lucide-react";
-import { formatPrice, paymentMethods } from "@/app/data/mockData";
+import { formatPrice, paymentMethods } from "@/lib/utils";
 import { useCart } from "@/app/context/CartContext";
 import { toast } from "sonner";
 

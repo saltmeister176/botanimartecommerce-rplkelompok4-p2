@@ -12,18 +12,41 @@ export default function Navbar() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  // Sync user state dari Supabase auth (konsisten dengan CartContext)
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user ?? null);
-    });
+    const loadUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      setUser(authUser ?? null);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (authUser) {
+        // Ambil role dari profiles (bukan user_metadata)
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, name')
+          .eq('id', authUser.id)
+          .single();
+        setProfile(data ?? null);
+      }
+    };
+
+    loadUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role, name')
+          .eq('id', session.user.id)
+          .single();
+        setProfile(data ?? null);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -53,9 +76,13 @@ export default function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
     setShowUserMenu(false);
     router.push('/');
+    router.refresh();
   };
+
+  const displayName = profile?.name ?? user?.email ?? '';
 
   return (
     <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
@@ -88,18 +115,12 @@ export default function Navbar() {
           <div className="flex items-center space-x-2">
 
             {/* Wishlist */}
-            <Link
-              href="/wishlist"
-              className="p-2 hover:bg-muted rounded-lg transition-colors group"
-            >
+            <Link href="/wishlist" className="p-2 hover:bg-muted rounded-lg transition-colors group">
               <Heart className="h-6 w-6 text-foreground group-hover:text-destructive group-hover:scale-110 transition-all" />
             </Link>
 
             {/* Cart */}
-            <Link
-              href="/cart"
-              className="relative p-2 hover:bg-muted rounded-lg transition-colors group"
-            >
+            <Link href="/cart" className="relative p-2 hover:bg-muted rounded-lg transition-colors group">
               <ShoppingCart className="h-6 w-6 text-foreground group-hover:scale-110 transition-transform" />
               {getCartCount() > 0 && (
                 <span className="absolute -top-1 -right-1 bg-secondary text-secondary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
@@ -116,64 +137,46 @@ export default function Navbar() {
                   className="flex items-center space-x-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
                 >
                   <User className="h-5 w-5" />
-                  <span className="hidden sm:inline">{user.user_metadata?.name ?? user.email}</span>
+                  <span className="hidden sm:inline">{displayName}</span>
                 </button>
 
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg py-2 z-50">
                     <div className="px-4 py-2 border-b border-border">
-                      <p className="text-sm text-foreground">{user.user_metadata?.name ?? '-'}</p>
+                      <p className="text-sm text-foreground">{profile?.name ?? '-'}</p>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
 
-                    <Link
-                      href="/"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors"
-                    >
+                    <Link href="/" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
                       <span className="text-sm">🏠 Homepage</span>
                     </Link>
 
-                    <Link
-                      href="/products"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors"
-                    >
+                    <Link href="/products" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
                       <span className="text-sm">🛍️ Browse Products</span>
                     </Link>
 
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors"
-                    >
+                    <Link href="/dashboard" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
                       <span className="text-sm">📦 My Orders</span>
                     </Link>
 
-                    <Link
-                      href="/profile"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors"
-                    >
+                    <Link href="/profile" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
                       <span className="text-sm">👤 Profile</span>
                     </Link>
 
-                    {user.user_metadata?.role === 'admin' && (
-                      <Link
-                        href="/admin"
-                        onClick={() => setShowUserMenu(false)}
-                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors"
-                      >
+                    {profile?.role === 'admin' && (
+                      <Link href="/admin" onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
                         <span className="text-sm">⚙️ Admin Panel</span>
                       </Link>
                     )}
 
-                    {user.user_metadata?.role === 'store_manager' && (
-                      <Link
-                        href="/store-manager"
-                        onClick={() => setShowUserMenu(false)}
-                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors"
-                      >
+                    {profile?.role === 'store_manager' && (
+                      <Link href="/store-manager" onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
                         <span className="text-sm">🏪 Store Manager</span>
                       </Link>
                     )}
