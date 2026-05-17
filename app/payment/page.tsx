@@ -70,15 +70,29 @@ export default function Payment() {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      // Buat order di database
+      const res = await fetch("/api/orders", { method: "POST" });
+
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Gagal membuat pesanan");
+        return;
+      }
+
+      const order = await res.json();
+
       toast.success("Payment submitted successfully!");
       clearCart();
 
-      // ✅ Redirect pakai query param
       router.push(
-        `/payment/success?orderId=ORD-${Date.now()}&total=${total}`
+        `/payment/success?orderId=${order.id}&total=${total}`
       );
-    }, 1500);
+    } catch {
+      toast.error("Terjadi kesalahan, coba lagi");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
