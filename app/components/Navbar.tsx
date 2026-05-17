@@ -24,7 +24,6 @@ export default function Navbar() {
       setUser(authUser ?? null);
 
       if (authUser) {
-        // Ambil role dari profiles (bukan user_metadata)
         const { data } = await supabase
           .from('profiles')
           .select('role, name')
@@ -80,10 +79,12 @@ export default function Navbar() {
   };
 
   const confirmLogout = async () => {
-    await supabase.auth.signOut();
+    // Reset state dulu agar UI langsung update tanpa tunggu event
+    setShowLogoutConfirm(false);
     setUser(null);
     setProfile(null);
-    setShowLogoutConfirm(false);
+    // Baru sign out dan redirect
+    await supabase.auth.signOut();
     router.push('/');
   };
 
@@ -91,21 +92,131 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
 
-          {/* LOGO */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg">
-              <span className="text-xl">🌿</span>
+            {/* LOGO */}
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg">
+                <span className="text-xl">🌿</span>
+              </div>
+              <span className="text-xl text-primary">Botani Mart</span>
+            </Link>
+
+            {/* SEARCH — Desktop */}
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari produk pertanian..."
+                  className="w-full px-4 py-2 pl-10 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary hover:border-primary/50 transition-colors"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+              </div>
+            </form>
+
+            {/* ACTIONS */}
+            <div className="flex items-center space-x-2">
+
+              {/* Wishlist */}
+              <Link href="/wishlist" className="p-2 hover:bg-muted rounded-lg transition-colors group">
+                <Heart className="h-6 w-6 text-foreground group-hover:text-destructive group-hover:scale-110 transition-all" />
+              </Link>
+
+              {/* Cart */}
+              <Link href="/cart" className="relative p-2 hover:bg-muted rounded-lg transition-colors group">
+                <ShoppingCart className="h-6 w-6 text-foreground group-hover:scale-110 transition-transform" />
+                {getCartCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-secondary text-secondary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    {getCartCount()}
+                  </span>
+                )}
+              </Link>
+
+              {/* User Menu */}
+              {user ? (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowUserMenu((prev) => !prev)}
+                    className="flex items-center space-x-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <User className="h-5 w-5" />
+                    <span className="hidden sm:inline">{displayName}</span>
+                  </button>
+
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg py-2 z-50">
+                      <div className="px-4 py-2 border-b border-border">
+                        <p className="text-sm text-foreground">{profile?.name ?? '-'}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+
+                      <Link href="/" onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
+                        <span className="text-sm">🏠 Homepage</span>
+                      </Link>
+
+                      <Link href="/products" onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
+                        <span className="text-sm">🛍️ Browse Products</span>
+                      </Link>
+
+                      <Link href="/dashboard" onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
+                        <span className="text-sm">📦 My Orders</span>
+                      </Link>
+
+                      <Link href="/profile" onClick={() => setShowUserMenu(false)}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
+                        <span className="text-sm">👤 Profile</span>
+                      </Link>
+
+                      {profile?.role === 'admin' && (
+                        <Link href="/admin" onClick={() => setShowUserMenu(false)}
+                          className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
+                          <span className="text-sm">⚙️ Admin Panel</span>
+                        </Link>
+                      )}
+
+                      {profile?.role === 'store_manager' && (
+                        <Link href="/store-manager" onClick={() => setShowUserMenu(false)}
+                          className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
+                          <span className="text-sm">🏪 Store Manager</span>
+                        </Link>
+                      )}
+
+                      <div className="border-t border-border mt-2 pt-2">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center space-x-2 text-destructive"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span className="text-sm">Logout</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  <User className="h-5 w-5" />
+                  <span className="hidden sm:inline">Login</span>
+                </Link>
+              )}
             </div>
-            <span className="text-xl text-primary">Botani Mart</span>
-          </Link>
+          </div>
+        </div>
 
-          {/* SEARCH — Desktop */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
+        {/* SEARCH — Mobile */}
+        <div className="md:hidden px-4 pb-3">
+          <form onSubmit={handleSearch} className="w-full">
+            <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
@@ -116,149 +227,39 @@ export default function Navbar() {
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
             </div>
           </form>
+        </div>
+      </nav>
 
-          {/* ACTIONS */}
-          <div className="flex items-center space-x-2">
-
-            {/* Wishlist */}
-            <Link href="/wishlist" className="p-2 hover:bg-muted rounded-lg transition-colors group">
-              <Heart className="h-6 w-6 text-foreground group-hover:text-destructive group-hover:scale-110 transition-all" />
-            </Link>
-
-            {/* Cart */}
-            <Link href="/cart" className="relative p-2 hover:bg-muted rounded-lg transition-colors group">
-              <ShoppingCart className="h-6 w-6 text-foreground group-hover:scale-110 transition-transform" />
-              {getCartCount() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-secondary text-secondary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                  {getCartCount()}
-                </span>
-              )}
-            </Link>
-
-            {/* User Menu */}
-            {user ? (
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setShowUserMenu((prev) => !prev)}
-                  className="flex items-center space-x-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
-                >
-                  <User className="h-5 w-5" />
-                  <span className="hidden sm:inline">{displayName}</span>
-                </button>
-
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg py-2 z-50">
-                    <div className="px-4 py-2 border-b border-border">
-                      <p className="text-sm text-foreground">{profile?.name ?? '-'}</p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
-
-                    <Link href="/" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                      <span className="text-sm">🏠 Homepage</span>
-                    </Link>
-
-                    <Link href="/products" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                      <span className="text-sm">🛍️ Browse Products</span>
-                    </Link>
-
-                    <Link href="/dashboard" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                      <span className="text-sm">📦 My Orders</span>
-                    </Link>
-
-                    <Link href="/profile" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                      <span className="text-sm">👤 Profile</span>
-                    </Link>
-
-                    {profile?.role === 'admin' && (
-                      <Link href="/admin" onClick={() => setShowUserMenu(false)}
-                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                        <span className="text-sm">⚙️ Admin Panel</span>
-                      </Link>
-                    )}
-
-                    {profile?.role === 'store_manager' && (
-                      <Link href="/store-manager" onClick={() => setShowUserMenu(false)}
-                        className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                        <span className="text-sm">🏪 Store Manager</span>
-                      </Link>
-                    )}
-
-                    <div className="border-t border-border mt-2 pt-2">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 hover:bg-muted transition-colors flex items-center space-x-2 text-destructive"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span className="text-sm">Logout</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+          />
+          <div className="relative bg-card border border-border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">👋</div>
+              <h3 className="text-lg font-medium text-foreground">Yakin mau logout?</h3>
+              <p className="text-sm text-muted-foreground mt-1">Kamu harus login lagi untuk akses akun.</p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors"
               >
-                <User className="h-5 w-5" />
-                <span className="hidden sm:inline">Login</span>
-              </Link>
-            )}
+                Batal
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 px-4 py-2 bg-destructive text-white rounded-lg text-sm hover:opacity-90 transition-opacity"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* SEARCH — Mobile */}
-      <div className="md:hidden px-4 pb-3">
-        <form onSubmit={handleSearch} className="w-full">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari produk pertanian..."
-              className="w-full px-4 py-2 pl-10 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary hover:border-primary/50 transition-colors"
-            />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-          </div>
-        </form>
-      </div>
-    </nav>
-
-    {/* Logout Confirmation Modal */}
-    {showLogoutConfirm && (
-      <div className="fixed inset-0 z-100 flex items-center justify-center">
-        <div
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowLogoutConfirm(false)}
-        />
-        <div className="relative bg-card border border-border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-          <div className="text-center mb-5">
-            <div className="text-4xl mb-3">👋</div>
-            <h3 className="text-lg font-medium text-foreground">Yakin mau logout?</h3>
-            <p className="text-sm text-muted-foreground mt-1">Kamu harus login lagi untuk akses akun.</p>
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => setShowLogoutConfirm(false)}
-              className="flex-1 px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              onClick={confirmLogout}
-              className="flex-1 px-4 py-2 bg-destructive text-white rounded-lg text-sm hover:opacity-90 transition-opacity"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+      )}
     </>
   );
 }
