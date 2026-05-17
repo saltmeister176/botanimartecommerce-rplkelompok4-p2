@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Package, Clock, CheckCircle, LogOut, Truck, RefreshCw,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
@@ -61,8 +61,11 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
     const init = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
