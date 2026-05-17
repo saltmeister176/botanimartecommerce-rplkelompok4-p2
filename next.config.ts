@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
+const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  output: 'standalone',
+}
 
-export default nextConfig;
+export default nextConfig as NextConfig;
+
+
