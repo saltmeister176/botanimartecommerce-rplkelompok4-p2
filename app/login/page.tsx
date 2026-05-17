@@ -65,7 +65,17 @@ export default function LoginPage() {
           if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
             toast.error("Email belum dikonfirmasi. Cek inbox kamu dan klik link verifikasi.");
           } else if (error.message.includes('Invalid login credentials')) {
-            toast.error("Email atau password salah.");
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("email", formData.email)
+              .single();
+        
+            if (!profile) {
+              toast.error("Email belum terdaftar. Silakan daftar terlebih dahulu.");
+            } else {
+              toast.error("Password salah. Coba lagi.");
+            }
           } else {
             toast.error(error.message);
           }
