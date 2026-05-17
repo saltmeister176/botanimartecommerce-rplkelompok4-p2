@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
-import { products, formatPrice } from "@/app/data/mockData";
+import { formatPrice } from "@/app/data/mockData";
 import { useCart } from "@/app/context/CartContext";
 import { toast } from "sonner";
 import Link from "next/link";
