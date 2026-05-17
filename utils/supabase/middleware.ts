@@ -7,7 +7,6 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Kalau env vars tidak ada (e.g. CI preview), skip middleware
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -27,16 +26,7 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Refresh session — jangan hapus baris ini
   await supabase.auth.getUser();
 
   return supabaseResponse;
 }
-
-// Penting: tanpa matcher ini, middleware jalan di SEMUA request
-// termasuk _next/static, favicon, dll — memperlambat build & runtime
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
-};
