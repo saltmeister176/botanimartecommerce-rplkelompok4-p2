@@ -101,6 +101,7 @@ export default function LoginPage() {
         } else {
           router.push("/");
         }
+        router.refresh();
       }
     } finally {
       setLoading(false);

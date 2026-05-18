@@ -61,6 +61,7 @@ export default function AdminPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
+    router.refresh();
   };
 
   const handleDeleteProduct = async (id: string) => {
