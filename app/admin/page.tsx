@@ -61,7 +61,6 @@ export default function AdminPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
-    router.refresh();
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -116,11 +115,97 @@ export default function AdminPage() {
         <h1 className="text-2xl mb-6">{activeTab.toUpperCase()}</h1>
 
         {activeTab === "dashboard" && (
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 border rounded"><Package />{products.length}</div>
-            <div className="p-4 border rounded"><Users />{users.length}</div>
-            <div className="p-4 border rounded"><ShoppingCart />{pendingOrders}</div>
-            <div className="p-4 border rounded"><DollarSign />{formatPrice(totalRevenue)}</div>
+          <div className="space-y-8">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-card border rounded-xl p-5 flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Package className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Produk</p>
+                  <p className="text-2xl font-semibold mt-0.5">{products.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">produk terdaftar</p>
+                </div>
+              </div>
+
+              <div className="bg-card border rounded-xl p-5 flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-secondary/10">
+                  <Users className="w-5 h-5 text-secondary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Pengguna</p>
+                  <p className="text-2xl font-semibold mt-0.5">{users.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">akun terdaftar</p>
+                </div>
+              </div>
+
+              <div className="bg-card border rounded-xl p-5 flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-accent/30">
+                  <ShoppingCart className="w-5 h-5 text-accent-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Order Pending</p>
+                  <p className="text-2xl font-semibold mt-0.5">{pendingOrders}</p>
+                  <p className="text-xs text-muted-foreground mt-1">menunggu konfirmasi</p>
+                </div>
+              </div>
+
+              <div className="bg-card border rounded-xl p-5 flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-green-100">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Pendapatan</p>
+                  <p className="text-2xl font-semibold mt-0.5">{formatPrice(totalRevenue)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">dari order selesai</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Orders */}
+            <div className="bg-card border rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b">
+                <h2 className="font-semibold">Order Terbaru</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">10 order terakhir yang masuk</p>
+              </div>
+              {orders.length === 0 ? (
+                <div className="px-6 py-10 text-center text-muted-foreground text-sm">Belum ada order</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Order ID</th>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Tanggal</th>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Total</th>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {orders.slice(0, 10).map((order: any) => (
+                      <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-6 py-3 font-mono text-xs text-muted-foreground">{order.id.slice(0, 8)}...</td>
+                        <td className="px-6 py-3">{formatDate(order.created_at)}</td>
+                        <td className="px-6 py-3 font-medium">{formatPrice(order.total)}</td>
+                        <td className="px-6 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            order.status === "completed" ? "bg-green-100 text-green-700" :
+                            order.status === "shipping"  ? "bg-blue-100 text-blue-700" :
+                            order.status === "processing" ? "bg-yellow-100 text-yellow-700" :
+                            "bg-gray-100 text-gray-600"
+                          }`}>
+                            {order.status === "completed" ? "Selesai" :
+                             order.status === "shipping"  ? "Dikirim" :
+                             order.status === "processing" ? "Diproses" :
+                             order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         )}
 
