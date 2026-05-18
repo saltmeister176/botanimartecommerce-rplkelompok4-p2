@@ -21,6 +21,12 @@ function PaymentSuccessContent() {
 
   if (!orderId || !total) return null;
 
+  // TC_PBL_WA_001 & TC_PBL_WA_002: WA link with pre-filled order details
+  const waMessage = encodeURIComponent(
+    "Halo admin Botani Mart, saya ingin konfirmasi pembayaran pesanan saya.\n\nOrder ID: " + orderId + "\nTotal: " + formatPrice(Number(total)) + "\n\nMohon segera diverifikasi. Terima kasih!"
+  );
+  const waUrl = "https://wa.me/6282135188880?text=" + waMessage;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
@@ -46,6 +52,14 @@ function PaymentSuccessContent() {
             </p>
           </div>
           <div className="flex flex-col space-y-3">
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center space-x-2 px-6 py-4 bg-green-500 text-white rounded-lg hover:opacity-90 transition-all"
+            >
+              <span>💬 Konfirmasi via WhatsApp</span>
+            </a>
             <Link href="/dashboard"
               className="flex items-center justify-center space-x-2 px-6 py-4 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all">
               <ShoppingBag className="h-5 w-5" />
