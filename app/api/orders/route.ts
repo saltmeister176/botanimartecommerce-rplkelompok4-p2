@@ -28,12 +28,22 @@ export async function POST() {
 
   const { data: cartItems, error: cartError } = await supabase
     .from('cart_items')
-    .select('*, products(price)')
+    .select('*, products(price, stock)')
     .eq('user_id', user.id)
 
   if (cartError) return NextResponse.json({ error: cartError.message }, { status: 500 })
   if (!cartItems || cartItems.length === 0) {
     return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
+  }
+
+  // Problem 3: Check stock availability before placing order
+  for (const item of cartItems) {
+    if (item.products.stock < item.quantity) {
+      return NextResponse.json(
+        { error: `Stok ${item.products.name} tidak mencukupi` },
+        { status: 400 }
+      )
+    }
   }
 
   const total = cartItems.reduce((sum: number, item: any) => {
@@ -60,6 +70,19 @@ export async function POST() {
     .insert(orderItems)
 
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 })
+
+  // Problem 3: Deduct stock for each product after order is created
+  for (const item of cartItems) {
+    const newStock = item.products.stock - item.quantity
+    const { error: stockError } = await supabase
+      .from('products')
+      .update({ stock: newStock })
+      .eq('id', item.product_id)
+
+    if (stockError) {
+      console.error(`Failed to update stock for product ${item.product_id}:`, stockError)
+    }
+  }
 
   await supabase.from('cart_items').delete().eq('user_id', user.id)
 

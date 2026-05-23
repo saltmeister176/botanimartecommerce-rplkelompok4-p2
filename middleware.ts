@@ -40,15 +40,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Kalau sudah login dan akses halaman auth → redirect ke home
+  // Problem 1 fix: redirect based on role when accessing login page
   const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
   if (isAuthRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, is_admin")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = profile?.role === "admin" || profile?.is_admin === true;
+    const isStoreManager = profile?.role === "store_manager";
+
+    if (isAdmin) return NextResponse.redirect(new URL("/admin", request.url));
+    if (isStoreManager) return NextResponse.redirect(new URL("/store-manager", request.url));
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Proteksi halaman admin — cek role dari profiles
+  // Proteksi halaman admin dan store-manager
   const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r));
   const isStoreManagerRoute = STORE_MANAGER_ROUTES.some((r) => pathname.startsWith(r));
+
+  if ((isAdminRoute || isStoreManagerRoute) && !user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   if ((isAdminRoute || isStoreManagerRoute) && user) {
     const { data: profile } = await supabase
@@ -60,17 +75,14 @@ export async function middleware(request: NextRequest) {
     const isAdmin = profile?.role === "admin" || profile?.is_admin === true;
     const isStoreManager = profile?.role === "store_manager";
 
-    if (isAdminRoute && !isAdmin) {
+    // Problem 2 fix: both admin and store_manager can access both pages
+    if (isAdminRoute && !isAdmin && !isStoreManager) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     if (isStoreManagerRoute && !isStoreManager && !isAdmin) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-  }
-
-  if ((isAdminRoute || isStoreManagerRoute) && !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return supabaseResponse;
