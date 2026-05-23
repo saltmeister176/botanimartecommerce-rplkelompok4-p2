@@ -14,6 +14,10 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
+  // Skip middleware for RSC prefetch requests to improve performance
+  const isRSCRequest = request.headers.get("RSC") === "1";
+  if (isRSCRequest) return supabaseResponse;
+
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
@@ -75,7 +79,6 @@ export async function middleware(request: NextRequest) {
     const isAdmin = profile?.role === "admin" || profile?.is_admin === true;
     const isStoreManager = profile?.role === "store_manager";
 
-    // Problem 2 fix: both admin and store_manager can access both pages
     if (isAdminRoute && !isAdmin && !isStoreManager) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
@@ -90,6 +93,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/data|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
