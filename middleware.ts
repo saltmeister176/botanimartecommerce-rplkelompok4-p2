@@ -44,24 +44,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Problem 1 fix: redirect based on role when accessing login page
+  // Kalau sudah login dan akses halaman login → redirect sesuai is_admin
   const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
   if (isAuthRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_admin")
+      .select("is_admin")
       .eq("id", user.id)
       .single();
 
-    const isAdmin = profile?.role === "admin" || profile?.is_admin === true;
-    const isStoreManager = profile?.role === "store_manager";
-
-    if (isAdmin) return NextResponse.redirect(new URL("/admin", request.url));
-    if (isStoreManager) return NextResponse.redirect(new URL("/store-manager", request.url));
+    if (profile?.is_admin === true) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Proteksi halaman admin dan store-manager
+  // Proteksi halaman admin & store-manager: harus login dulu
   const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r));
   const isStoreManagerRoute = STORE_MANAGER_ROUTES.some((r) => pathname.startsWith(r));
 
@@ -69,21 +67,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Cek is_admin untuk halaman admin & store-manager
   if ((isAdminRoute || isStoreManagerRoute) && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_admin")
+      .select("is_admin")
       .eq("id", user.id)
       .single();
 
-    const isAdmin = profile?.role === "admin" || profile?.is_admin === true;
-    const isStoreManager = profile?.role === "store_manager";
+    const isAdmin = profile?.is_admin === true;
 
-    if (isAdminRoute && !isAdmin && !isStoreManager) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    if (isStoreManagerRoute && !isStoreManager && !isAdmin) {
+    // Kedua halaman hanya boleh diakses oleh admin
+    if (!isAdmin) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
