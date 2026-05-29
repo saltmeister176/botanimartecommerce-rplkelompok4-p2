@@ -1,11 +1,11 @@
 'use client'
 
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, Package, Users, Activity,
   Image as ImageIcon, LogOut, Trash2, DollarSign, ShoppingCart,
+  Pencil, Check, X, Search, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
@@ -21,7 +21,15 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
 
-  // ── Auth check via Supabase (bukan localStorage) ──────────
+  // Product tab state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [editingStockValue, setEditingStockValue] = useState<number>(0);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [sortField, setSortField] = useState<"name" | "stock" | "price">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // ── Auth check via Supabase ──────────────────────────────
   useEffect(() => {
     const supabase = createClient();
 
@@ -70,6 +78,75 @@ export default function AdminPage() {
     }
   };
 
+  // ── Stock edit handlers ──────────────────────────────────
+  const startEditStock = (product: any) => {
+    setEditingStockId(product.id);
+    setEditingStockValue(product.stock ?? 0);
+  };
+
+  const cancelEditStock = () => {
+    setEditingStockId(null);
+  };
+
+  const saveStock = async (id: string) => {
+    if (editingStockValue < 0) {
+      toast.error("Stok tidak boleh negatif");
+      return;
+    }
+    setStockLoading(true);
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: editingStockValue }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setProducts(prev =>
+        prev.map(p => p.id === id ? { ...p, stock: editingStockValue } : p)
+      );
+      toast.success("Stok berhasil diperbarui");
+      setEditingStockId(null);
+    } catch {
+      toast.error("Gagal memperbarui stok");
+    } finally {
+      setStockLoading(false);
+    }
+  };
+
+  // ── Sort & filter ────────────────────────────────────────
+  const toggleSort = (field: typeof sortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: typeof sortField }) => {
+    if (sortField !== field) return <ChevronUp className="w-3 h-3 opacity-30" />;
+    return sortDir === "asc"
+      ? <ChevronUp className="w-3 h-3 text-primary" />
+      : <ChevronDown className="w-3 h-3 text-primary" />;
+  };
+
+  const filteredProducts = products
+    .filter(p =>
+      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.categories?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      let valA = a[sortField] ?? 0;
+      let valB = b[sortField] ?? 0;
+      if (sortField === "name") {
+        valA = (a.name ?? "").toLowerCase();
+        valB = (b.name ?? "").toLowerCase();
+      }
+      if (valA < valB) return sortDir === "asc" ? -1 : 1;
+      if (valA > valB) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
   if (!user) return null;
 
   const totalRevenue = orders
@@ -79,6 +156,8 @@ export default function AdminPage() {
   const pendingOrders = orders.filter(
     (o) => o.status === "pending" || o.payment_status === "unpaid"
   ).length;
+
+  const lowStockCount = products.filter(p => (p.stock ?? 0) <= 5).length;
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -110,12 +189,12 @@ export default function AdminPage() {
         </button>
       </aside>
 
-      <main className="flex-1 p-8">
+      <main className="flex-1 p-8 overflow-auto">
         <h1 className="text-2xl mb-6">{activeTab.toUpperCase()}</h1>
 
+        {/* ── DASHBOARD TAB ── */}
         {activeTab === "dashboard" && (
           <div className="space-y-8">
-            {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-card border rounded-xl p-5 flex items-start gap-4">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -162,7 +241,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Recent Orders */}
             <div className="bg-card border rounded-xl overflow-hidden">
               <div className="px-6 py-4 border-b">
                 <h2 className="font-semibold">Order Terbaru</h2>
@@ -208,14 +286,176 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ── PRODUCTS TAB ── */}
         {activeTab === "products" && (
-          <div>
-            {products.map((p) => (
-              <div key={p.id} className="flex gap-4 border p-2">
-                <span>{p.name}</span>
-                <button onClick={() => handleDeleteProduct(p.id)}><Trash2 /></button>
+          <div className="space-y-4">
+            {/* Header bar */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{products.length}</span> produk
+                </div>
+                {lowStockCount > 0 && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                    ⚠ {lowStockCount} stok hampir habis
+                  </span>
+                )}
               </div>
-            ))}
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Cari produk atau kategori..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 py-2 text-sm border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 w-64"
+                />
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-card border rounded-xl overflow-hidden">
+              {filteredProducts.length === 0 ? (
+                <div className="px-6 py-16 text-center text-muted-foreground text-sm">
+                  {searchQuery ? "Produk tidak ditemukan" : "Belum ada produk"}
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium w-16">Foto</th>
+                      <th
+                        className="text-left px-6 py-3 text-muted-foreground font-medium cursor-pointer select-none"
+                        onClick={() => toggleSort("name")}
+                      >
+                        <span className="flex items-center gap-1">
+                          Nama Produk <SortIcon field="name" />
+                        </span>
+                      </th>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Kategori</th>
+                      <th
+                        className="text-left px-6 py-3 text-muted-foreground font-medium cursor-pointer select-none"
+                        onClick={() => toggleSort("price")}
+                      >
+                        <span className="flex items-center gap-1">
+                          Harga <SortIcon field="price" />
+                        </span>
+                      </th>
+                      <th
+                        className="text-left px-6 py-3 text-muted-foreground font-medium cursor-pointer select-none"
+                        onClick={() => toggleSort("stock")}
+                      >
+                        <span className="flex items-center gap-1">
+                          Stok <SortIcon field="stock" />
+                        </span>
+                      </th>
+                      <th className="text-left px-6 py-3 text-muted-foreground font-medium">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredProducts.map((product: any) => (
+                      <tr key={product.id} className="hover:bg-muted/20 transition-colors">
+                        {/* Image */}
+                        <td className="px-6 py-3">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-10 h-10 rounded-lg object-cover border"
+                              onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.png"; }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                              <Package className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Name */}
+                        <td className="px-6 py-3">
+                          <span className="font-medium">{product.name}</span>
+                        </td>
+
+                        {/* Category */}
+                        <td className="px-6 py-3">
+                          <span className="text-muted-foreground text-xs">
+                            {product.categories?.name ?? product.category ?? "-"}
+                          </span>
+                        </td>
+
+                        {/* Price */}
+                        <td className="px-6 py-3 font-medium">
+                          {formatPrice(product.price)}
+                        </td>
+
+                        {/* Stock — inline edit */}
+                        <td className="px-6 py-3">
+                          {editingStockId === product.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                value={editingStockValue}
+                                onChange={e => setEditingStockValue(Number(e.target.value))}
+                                className="w-20 px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                autoFocus
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") saveStock(product.id);
+                                  if (e.key === "Escape") cancelEditStock();
+                                }}
+                              />
+                              <button
+                                onClick={() => saveStock(product.id)}
+                                disabled={stockLoading}
+                                className="p-1 rounded hover:bg-green-100 text-green-600 disabled:opacity-50"
+                                title="Simpan"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={cancelEditStock}
+                                className="p-1 rounded hover:bg-red-100 text-red-500"
+                                title="Batal"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${(product.stock ?? 0) <= 5 ? "text-red-600" : (product.stock ?? 0) <= 20 ? "text-yellow-600" : "text-foreground"}`}>
+                                {product.stock ?? 0}
+                              </span>
+                              {(product.stock ?? 0) <= 5 && (
+                                <span className="text-xs text-red-500 font-medium">Hampir habis</span>
+                              )}
+                              <button
+                                onClick={() => startEditStock(product)}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground"
+                                title="Edit stok"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-3">
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+                            title="Hapus produk"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         )}
 
