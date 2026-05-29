@@ -110,13 +110,19 @@ export default function StoreManager() {
     }
   };
 
-  const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
-    // Optimistic update — extend dengan API call jika ada endpoint-nya
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-    );
-    toast.success(`Order status updated to ${getStatusLabel(newStatus)}`);
-  };
+  const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    const res = await fetch(`/api/orders/${orderId}/payment`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+    if (res.ok) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
+      toast.success(`Status diupdate ke ${getStatusLabel(newStatus)}`)
+    } else {
+      toast.error('Gagal update status')
+    }
+  }
 
   if (!user) return null;
 

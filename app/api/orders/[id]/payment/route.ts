@@ -8,30 +8,68 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
-  const { payment_status } = await req.json()
+  // FIX #2: Cek apakah user adalah admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
 
-  const validStatuses = ['unpaid', 'paid', 'failed', 'refunded']
-  if (!validStatuses.includes(payment_status)) {
-    return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 })
+  const isAdmin = profile?.is_admin === true
+
+  const body = await req.json()
+  const { payment_status, status, payment_proof_url } = body
+
+  const validPaymentStatuses = ['unpaid', 'paid', 'failed', 'refunded']
+  const validOrderStatuses = ['pending', 'processing', 'shipping', 'completed', 'cancelled']
+
+  // Validasi input
+  if (payment_status && !validPaymentStatuses.includes(payment_status)) {
+    return NextResponse.json({ error: 'Invalid payment_status' }, { status: 400 })
+  }
+  if (status && !validOrderStatuses.includes(status)) {
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
   }
 
-  const { data: order, error: findError } = await supabase
+  // FIX #2: Admin boleh update order siapapun, user biasa hanya punya sendiri
+  const orderQuery = supabase
     .from('orders')
-    .select('id')
+    .select('id, user_id')
     .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+
+  if (!isAdmin) {
+    orderQuery.eq('user_id', user.id)
+  }
+
+  const { data: order, error: findError } = await orderQuery.single()
 
   if (findError || !order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
 
+  // Susun update object
+  const updates: Record<string, any> = {}
+  if (payment_status) {
+    updates.payment_status = payment_status
+    // Auto-update status order kalau payment dikonfirmasi
+    if (payment_status === 'paid') updates.status = 'processing'
+  }
+  // FIX #2: Admin bisa update status order secara eksplisit
+  if (status && isAdmin) {
+    updates.status = status
+  }
+  // FIX #3: Simpan URL bukti bayar
+  if (payment_proof_url) {
+    updates.payment_proof_url = payment_proof_url
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('orders')
-    .update({
-      payment_status,
-      status: payment_status === 'paid' ? 'processing' : 'pending'
-    })
+    .update(updates)
     .eq('id', id)
     .select()
     .single()

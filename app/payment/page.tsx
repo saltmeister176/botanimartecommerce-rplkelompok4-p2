@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { QrCode, Building2, Upload, CheckCircle, ArrowLeft } from "lucide-react";
+import { QrCode, Building2, Upload, ArrowLeft } from "lucide-react";
 import { formatPrice, paymentMethods } from "@/lib/utils";
 import { useCart } from "@/app/context/CartContext";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 export default function Payment() {
@@ -14,53 +15,39 @@ export default function Payment() {
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [state, setState] = useState<any>(null);
 
-    useEffect(() => {
-  const savedData = localStorage.getItem("checkoutData");
-
-  if (!savedData) {
-    router.replace("/cart");
-    return;
-  }
-
-  setState(JSON.parse(savedData));
-}, [router]);
+  useEffect(() => {
+    const savedData = localStorage.getItem("checkoutData");
+    if (!savedData) {
+      router.replace("/cart");
+      return;
+    }
+    setState(JSON.parse(savedData));
+  }, [router]);
 
   if (!state) return null;
 
-  const {
-    formData,
-    shippingMethod,
-    paymentMethod,
-    subtotal,
-    shippingCost,
-    total,
-    cart,
-  } = state;
+  const { formData, shippingMethod, paymentMethod, subtotal, shippingCost, total, cart } = state;
 
-  const selectedPayment = paymentMethods.find(
-    (p) => p.id === paymentMethod
-  );
+  const selectedPayment = paymentMethods.find((p) => p.id === paymentMethod);
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validasi ukuran file (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Ukuran file maksimal 5MB");
+        return;
+      }
       setPaymentProof(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
+      reader.onloadend = () => setPreviewUrl(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent
-  ) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!paymentProof && selectedPayment?.type === "bank_transfer") {
@@ -71,7 +58,7 @@ export default function Payment() {
     setIsSubmitting(true);
 
     try {
-      // Buat order di database
+      // Step 1: Buat order di database
       const res = await fetch("/api/orders", { method: "POST" });
 
       if (!res.ok) {
@@ -82,12 +69,37 @@ export default function Payment() {
 
       const order = await res.json();
 
-      toast.success("Payment submitted successfully!");
+      // FIX #3: Step 2 - Upload bukti bayar ke Supabase Storage (jika ada)
+      if (paymentProof) {
+        const supabase = createClient();
+        const ext = paymentProof.name.split(".").pop();
+        const filePath = `payment-proofs/${order.id}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("uploads")
+          .upload(filePath, paymentProof, { upsert: true });
+
+        if (uploadError) {
+          // Upload gagal tapi order sudah dibuat — tetap lanjut, tapi kasih warning
+          console.error("Upload bukti bayar gagal:", uploadError);
+          toast.warning("Order berhasil dibuat, tapi bukti bayar gagal diupload. Silakan hubungi admin.");
+        } else {
+          // Step 3: Simpan path bukti bayar ke order
+          await fetch(`/api/orders/${order.id}/payment`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payment_proof_url: filePath }),
+          });
+        }
+      }
+
+      // Bersihkan localStorage checkout data
+      localStorage.removeItem("checkoutData");
+
+      toast.success("Pesanan berhasil dibuat!");
       clearCart();
 
-      router.push(
-        `/payment/success?orderId=${order.id}&total=${total}`
-      );
+      router.push(`/payment/success?orderId=${order.id}&total=${total}`);
     } catch {
       toast.error("Terjadi kesalahan, coba lagi");
     } finally {
@@ -132,27 +144,17 @@ export default function Payment() {
                       className="w-48 h-48 mx-auto"
                     />
                   </div>
-                  <p className="text-2xl text-primary">
-                    {formatPrice(total)}
-                  </p>
+                  <p className="text-2xl text-primary">{formatPrice(total)}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="bg-muted/30 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Account Number
-                    </p>
-                    <p className="text-lg text-foreground">
-                      {selectedPayment?.details}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">Account Number</p>
+                    <p className="text-lg text-foreground">{selectedPayment?.details}</p>
                   </div>
                   <div className="bg-muted/30 p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Amount to Transfer
-                    </p>
-                    <p className="text-2xl text-primary">
-                      {formatPrice(total)}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">Amount to Transfer</p>
+                    <p className="text-2xl text-primary">{formatPrice(total)}</p>
                   </div>
                 </div>
               )}
@@ -160,11 +162,9 @@ export default function Payment() {
 
             {selectedPayment?.type === "bank_transfer" && (
               <div className="bg-card border border-border rounded-lg p-6">
-                <h3 className="text-foreground mb-4">
-                  Upload Payment Proof
-                </h3>
+                <h3 className="text-foreground mb-4">Upload Payment Proof</h3>
                 <label className="block">
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer">
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors">
                     {previewUrl ? (
                       <img
                         src={previewUrl}
@@ -174,15 +174,14 @@ export default function Payment() {
                     ) : (
                       <>
                         <Upload className="h-12 w-12 mx-auto text-muted-foreground" />
-                        <p className="text-muted-foreground">
-                          Click to upload payment proof
-                        </p>
+                        <p className="text-muted-foreground mt-2">Click to upload payment proof</p>
+                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG, JPEG (max 5MB)</p>
                       </>
                     )}
                   </div>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/jpg"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -193,9 +192,7 @@ export default function Payment() {
 
           <div>
             <div className="bg-card border border-border rounded-lg p-6 sticky top-20">
-              <h3 className="text-foreground mb-4">
-                Order Summary
-              </h3>
+              <h3 className="text-foreground mb-4">Order Summary</h3>
 
               <div className="space-y-3 mb-6 border-b border-border pb-6">
                 <div className="flex justify-between text-sm">
@@ -204,17 +201,11 @@ export default function Payment() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
-                  <span>
-                    {shippingCost === 0
-                      ? "Free"
-                      : formatPrice(shippingCost)}
-                  </span>
+                  <span>{shippingCost === 0 ? "Free" : formatPrice(shippingCost)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total</span>
-                  <span className="text-xl text-primary">
-                    {formatPrice(total)}
-                  </span>
+                  <span className="text-xl text-primary">{formatPrice(total)}</span>
                 </div>
               </div>
 
@@ -222,14 +213,11 @@ export default function Payment() {
                 onClick={handleSubmit}
                 disabled={
                   isSubmitting ||
-                  (!paymentProof &&
-                    selectedPayment?.type === "bank_transfer")
+                  (!paymentProof && selectedPayment?.type === "bank_transfer")
                 }
-                className="w-full px-6 py-4 bg-primary text-primary-foreground rounded-lg"
+                className="w-full px-6 py-4 bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting
-                  ? "Memproses Pembayaran..."
-                  : "✓ Konfirmasi Pembayaran"}
+                {isSubmitting ? "Memproses Pembayaran..." : "✓ Konfirmasi Pembayaran"}
               </button>
             </div>
           </div>

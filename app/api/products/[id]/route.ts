@@ -1,10 +1,12 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
+// FIX #4: params harus di-await di Next.js 15
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Only allow admins
@@ -37,7 +39,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from('products')
     .update(updates)
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
     .single()
 
@@ -48,10 +50,12 @@ export async function PATCH(
   return NextResponse.json(data)
 }
 
+// FIX #4: params harus di-await di Next.js 15
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -70,7 +74,7 @@ export async function DELETE(
   const { error } = await supabase
     .from('products')
     .delete()
-    .eq('id', params.id)
+    .eq('id', id)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

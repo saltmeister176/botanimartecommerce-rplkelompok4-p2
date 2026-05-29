@@ -2,18 +2,32 @@ import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import { sendEmailNotification, sendWhatsAppNotification } from 'lib/notifications'
 
-// GET - fetch current user's orders
+// GET - fetch orders (admin: semua order, user biasa: punya sendiri)
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
-  const { data, error } = await supabase
+  // FIX #1: Cek apakah user adalah admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single()
+
+  const isAdmin = profile?.is_admin === true
+
+  // Admin lihat semua order + info user, biasa lihat punya sendiri
+  let query = supabase
     .from('orders')
-    .select('*, order_items(*, products(name, image_url))')
-    .eq('user_id', user.id)
+    .select('*, order_items(*, products(name, image_url)), profiles(name, email)')
     .order('created_at', { ascending: false })
 
+  if (!isAdmin) {
+    query = query.eq('user_id', user.id)
+  }
+
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json(data)
@@ -36,7 +50,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
   }
 
-  // Problem 3: Check stock availability before placing order
+  // Check stock availability before placing order
   for (const item of cartItems) {
     if (item.products.stock < item.quantity) {
       return NextResponse.json(
@@ -71,7 +85,7 @@ export async function POST() {
 
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 })
 
-  // Problem 3: Deduct stock for each product after order is created
+  // Deduct stock for each product after order is created
   for (const item of cartItems) {
     const newStock = item.products.stock - item.quantity
     const { error: stockError } = await supabase
@@ -87,22 +101,22 @@ export async function POST() {
   await supabase.from('cart_items').delete().eq('user_id', user.id)
 
   // Send notifications
-  const { data: profile } = await supabase
+  const { data: userProfile } = await supabase
     .from('profiles')
     .select('name, email, phone_number')
     .eq('id', user.id)
     .single()
 
-  if (profile) {
-    const message = `Hi ${profile.name}! Your BotaniMart order has been placed. Total: Rp ${total.toLocaleString('id-ID')}.`
+  if (userProfile) {
+    const message = `Hi ${userProfile.name}! Your BotaniMart order has been placed. Total: Rp ${total.toLocaleString('id-ID')}.`
     try {
-      await sendEmailNotification({ to: profile.email, subject: 'Order Confirmed!', message })
+      await sendEmailNotification({ to: userProfile.email, subject: 'Order Confirmed!', message })
     } catch (e) {
       console.error('Email notification failed:', e)
     }
-    if (profile.phone_number) {
+    if (userProfile.phone_number) {
       try {
-        await sendWhatsAppNotification({ phone: profile.phone_number, message })
+        await sendWhatsAppNotification({ phone: userProfile.phone_number, message })
       } catch (e) {
         console.error('WhatsApp notification failed:', e)
       }
