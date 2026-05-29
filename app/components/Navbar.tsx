@@ -26,7 +26,7 @@ export default function Navbar() {
       if (authUser) {
         const { data } = await supabase
           .from('profiles')
-          .select('role, is_admin, name')
+          .select('is_admin, name')
           .eq('id', authUser.id)
           .single();
         setProfile(data ?? null);
@@ -40,7 +40,7 @@ export default function Navbar() {
       if (session?.user) {
         const { data } = await supabase
           .from('profiles')
-          .select('role, is_admin, name')
+          .select('is_admin, name')
           .eq('id', session.user.id)
           .single();
         setProfile(data ?? null);
@@ -79,11 +79,9 @@ export default function Navbar() {
   };
 
   const confirmLogout = async () => {
-    // Reset state dulu agar UI langsung update tanpa tunggu event
     setShowLogoutConfirm(false);
     setUser(null);
     setProfile(null);
-    // Baru sign out dan redirect
     await supabase.auth.signOut();
     router.push('/');
   };
@@ -174,17 +172,10 @@ export default function Navbar() {
                         <span className="text-sm">👤 Profile</span>
                       </Link>
 
-                      {(profile?.role === 'admin' || profile?.is_admin === true) && (
+                      {profile?.is_admin === true && (
                         <Link href="/admin" onClick={() => setShowUserMenu(false)}
                           className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                          <span className="text-sm">⚙️ Admin Panel</span>
-                        </Link>
-                      )}
-
-                      {profile?.role === 'store_manager' && (
-                        <Link href="/store-manager" onClick={() => setShowUserMenu(false)}
-                          className="flex items-center space-x-2 px-4 py-2 hover:bg-muted transition-colors">
-                          <span className="text-sm">🏪 Store Manager</span>
+                          <span className="text-sm">⚙️ Order Status Panel</span>
                         </Link>
                       )}
 

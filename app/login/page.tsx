@@ -82,10 +82,10 @@ export default function LoginPage() {
           return;
         }
 
-        // Ambil role dari profiles
+        // Ambil is_admin dari profiles
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("is_admin")
           .eq("id", data.user.id)
           .single();
 
@@ -94,10 +94,8 @@ export default function LoginPage() {
         // Tunggu sebentar agar toast tampil, lalu redirect
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        if (profile?.role === "admin") {
+        if (profile?.is_admin === true) {
           router.push("/admin");
-        } else if (profile?.role === "store_manager") {
-          router.push("/store-manager");
         } else {
           router.push("/");
         }

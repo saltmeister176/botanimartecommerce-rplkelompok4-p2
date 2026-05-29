@@ -44,14 +44,14 @@ export default function StoreManager() {
         return;
       }
 
-      // Ambil role dari tabel profiles
+      // Ambil is_admin dari tabel profiles
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, name")
+        .select("is_admin, name")
         .eq("id", authUser.id)
         .single();
 
-      if (!profile || profile.role !== "store_manager") {
+      if (!profile || profile.is_admin !== true) {
         router.push("/dashboard");
         return;
       }

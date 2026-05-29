@@ -43,11 +43,11 @@ export default function AdminPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, name")
+        .select("is_admin, name")
         .eq("id", authUser.id)
         .single();
 
-      if (!profile || profile.role !== "admin") {
+      if (!profile || profile.is_admin !== true) {
         router.push("/dashboard");
         return;
       }
