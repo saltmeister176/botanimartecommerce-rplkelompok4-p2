@@ -85,19 +85,6 @@ export async function POST() {
 
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 })
 
-  // Deduct stock for each product after order is created
-  for (const item of cartItems) {
-    const newStock = item.products.stock - item.quantity
-    const { error: stockError } = await supabase
-      .from('products')
-      .update({ stock: newStock })
-      .eq('id', item.product_id)
-
-    if (stockError) {
-      console.error(`Failed to update stock for product ${item.product_id}:`, stockError)
-    }
-  }
-
   await supabase.from('cart_items').delete().eq('user_id', user.id)
 
   // Send notifications
