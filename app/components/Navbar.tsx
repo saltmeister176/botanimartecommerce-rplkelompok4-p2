@@ -79,15 +79,12 @@ export default function Navbar() {
   };
 
   const confirmLogout = async () => {
-    setShowLogoutConfirm(false);
-    // Tunggu signOut selesai dulu sebelum clear state & navigasi
-    // supaya cookie session sudah bersih sebelum middleware jalan
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    router.refresh(); // paksa middleware re-evaluate session
-    router.push('/');
-  };
+  setShowLogoutConfirm(false);
+  await supabase.auth.signOut({ scope: 'local' });
+  setUser(null);
+  setProfile(null);
+  window.location.href = "/login";
+};
 
   const displayName = profile?.name ?? user?.email ?? '';
 

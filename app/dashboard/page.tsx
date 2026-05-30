@@ -100,11 +100,11 @@ export default function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Berhasil logout");
-    router.push("/");
-    router.refresh();
-  };
+  const supabase = createClient();
+  await supabase.auth.signOut({ scope: 'local' });
+  toast.success("Berhasil logout");
+  window.location.href = "/login";
+};
 
   if (loading) {
     return (

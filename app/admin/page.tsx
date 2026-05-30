@@ -65,10 +65,10 @@ export default function AdminPage() {
   }, [user]);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-  };
+  const supabase = createClient();
+  await supabase.auth.signOut({ scope: 'local' });
+  window.location.href = "/login";
+};
 
   const handleDeleteProduct = async (id: string) => {
     if (confirm("Delete this product?")) {

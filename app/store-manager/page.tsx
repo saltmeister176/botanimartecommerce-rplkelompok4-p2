@@ -83,10 +83,11 @@ export default function StoreManager() {
   }, [user]);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-  };
+  const supabase = createClient();
+  await supabase.auth.signOut({ scope: 'local' });
+  toast.success("Berhasil logout");
+  window.location.href = "/login";
+};
 
   const handleVerifyPayment = async (orderId: string) => {
     const res = await fetch(`/api/orders/${orderId}/payment`, {
