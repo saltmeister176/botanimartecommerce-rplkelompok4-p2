@@ -17,20 +17,20 @@ export async function GET() {
 
   const isAdmin = profile?.is_admin === true
 
-  // Admin lihat semua order + info user, biasa lihat punya sendiri
-  let query = supabase
-    .from('orders')
-    .select('*, order_items(*, products(name, image_url)), profiles(name, email)')
-    .order('created_at', { ascending: false })
+// Admin lihat semua order, biasa lihat punya sendiri
+let query = supabase
+  .from('orders')
+  .select('*, order_items(*, products(name, image_url))')
+  .order('created_at', { ascending: false })
 
-  if (!isAdmin) {
-    query = query.eq('user_id', user.id)
-  }
+if (!isAdmin) {
+  query = query.eq('user_id', user.id)
+}
 
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+const { data, error } = await query
+if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json(data)
+return NextResponse.json(data)
 }
 
 // POST - place an order from current cart
