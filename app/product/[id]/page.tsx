@@ -44,20 +44,21 @@ export default function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (product.stock > 0) {
-      const res = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: product.id, quantity }),
-      })
-
-      if (res.ok) {
-        toast.success(`✓ ${quantity}x ${product.name} berhasil ditambahkan ke keranjang`, {
-          description: "Lanjutkan belanja atau cek keranjang Anda",
-          duration: 3000,
-        })
-      } else {
-        toast.error("Please log in first.")
+      // Tambahkan satu per satu sesuai quantity yang dipilih
+      for (let i = 0; i < quantity; i++) {
+        await addToCart({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image_url: product.image_url ?? null,
+          stock: product.stock,
+          category_id: product.category_id ?? null,
+        });
       }
+      toast.success(`✓ ${quantity}x ${product.name} berhasil ditambahkan ke keranjang`, {
+        description: "Lanjutkan belanja atau cek keranjang Anda",
+        duration: 3000,
+      })
     } else {
       toast.error("❌ Produk tidak tersedia", { description: "Stok habis" })
     }

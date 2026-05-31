@@ -137,7 +137,7 @@ export default function Landing() {
                 href={`/products?category=${category.name}`}
                 className="border rounded-lg p-8 text-center hover:shadow-lg transition"
               >
-                <div className="mx-auto mb-4">
+                <div className="flex justify-center mx-auto mb-4">
                   {Icon && <Icon className="h-8 w-8" />}
                 </div>
                 <h3>{category.name}</h3>
