@@ -8,9 +8,15 @@ import {
   CreditCard,
   Building2,
   QrCode,
+  Tag,
+  X,
 } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import { formatPrice, paymentMethods } from "@/lib/utils";
+
+const VALID_PROMO_CODES: Record<string, number> = {
+  BOTANI20: 0.2,
+};
 
 export default function Checkout() {
   const { cart, getCartTotal } = useCart();
@@ -26,27 +32,52 @@ export default function Checkout() {
     address: "",
   });
 
-  const shippingCost = shippingMethod === "delivery" ? 15000 : 0;
-  const total = getCartTotal() + shippingCost;
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState("");
 
-  // 🔥 Redirect kalau cart kosong
+  const shippingCost = shippingMethod === "delivery" ? 15000 : 0;
+  const subtotal = getCartTotal();
+  const discountRate = appliedPromo ? VALID_PROMO_CODES[appliedPromo] : 0;
+  const discountAmount = Math.round(subtotal * discountRate);
+  const total = subtotal - discountAmount + shippingCost;
+
   useEffect(() => {
     if (cart.length === 0) {
       router.push("/cart");
     }
   }, [cart, router]);
 
+  const handleApplyPromo = () => {
+    const code = promoInput.trim().toUpperCase();
+    if (appliedPromo) return;
+
+    if (VALID_PROMO_CODES[code] !== undefined) {
+      setAppliedPromo(code);
+      setPromoError("");
+      setPromoInput("");
+    } else {
+      setPromoError("Kode promo tidak valid.");
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoError("");
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!paymentMethod) return;
 
-    // Simpan data ke localStorage
     const checkoutData = {
       formData,
       shippingMethod,
       paymentMethod,
-      subtotal: getCartTotal(),
+      subtotal,
+      discountCode: appliedPromo,
+      discountAmount,
       shippingCost,
       total,
       cart,
@@ -161,6 +192,58 @@ export default function Checkout() {
               </div>
             </div>
 
+            {/* PROMO CODE */}
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="mb-4 flex items-center space-x-2">
+                <Tag className="h-5 w-5" />
+                <span>Kode Promo</span>
+              </h3>
+
+              {appliedPromo ? (
+                <div className="flex items-center justify-between bg-primary/10 border border-primary/30 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-primary font-medium">{appliedPromo}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Diskon {Math.round(VALID_PROMO_CODES[appliedPromo] * 100)}% berhasil diterapkan
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="p-1 hover:text-destructive transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Masukkan kode promo"
+                      value={promoInput}
+                      onChange={(e) => {
+                        setPromoInput(e.target.value);
+                        setPromoError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyPromo())}
+                      className="flex-1 px-4 py-2 border rounded-lg uppercase placeholder:normal-case"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyPromo}
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                    >
+                      Terapkan
+                    </button>
+                  </div>
+                  {promoError && (
+                    <p className="text-sm text-destructive">{promoError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* CUSTOMER */}
             <div className="bg-card border rounded-lg p-6">
               <h3 className="mb-4 flex items-center space-x-2">
@@ -215,15 +298,20 @@ export default function Checkout() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal ({cart.length} items)</span>
-                  <span>{formatPrice(getCartTotal())}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
+
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-primary">
+                    <span>Diskon ({appliedPromo})</span>
+                    <span>- {formatPrice(discountAmount)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-sm">
                   <span>Shipping</span>
                   <span>
-                    {shippingCost === 0
-                      ? "Free"
-                      : formatPrice(shippingCost)}
+                    {shippingCost === 0 ? "Free" : formatPrice(shippingCost)}
                   </span>
                 </div>
 

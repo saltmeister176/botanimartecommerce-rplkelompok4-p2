@@ -13,7 +13,7 @@ export interface CartProduct {
 }
 
 export interface CartItem {
-  id: string;         // cart_items.id
+  id: string;
   product_id: string;
   quantity: number;
   product: CartProduct;
@@ -81,7 +81,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const addToCart = async (product: CartProduct, quantity: number = 1) => {
-    // Optimistic update
+    const tempId = `temp-${product.id}`;
+
+    // Optimistic update — langsung tampilkan quantity penuh
     setCart((prev) => {
       const existing = prev.find((i) => i.product_id === product.id);
       if (existing) {
@@ -89,15 +91,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
-      return [
-        ...prev,
-        {
-          id: `temp-${product.id}`,
-          product_id: product.id,
-          quantity,
-          product,
-        },
-      ];
+      return [...prev, { id: tempId, product_id: product.id, quantity, product }];
     });
 
     try {
@@ -108,11 +102,21 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (res.status === 401) {
+        // Belum login — rollback
         await refreshCart();
         return;
       }
 
-      await refreshCart();
+      if (res.ok) {
+        // Ganti temp ID dengan ID real dari DB, tanpa refresh penuh
+        const saved = await res.json();
+        const realId = Array.isArray(saved) ? saved[0]?.id : saved?.id;
+        if (realId) {
+          setCart((prev) =>
+            prev.map((i) => (i.id === tempId ? { ...i, id: realId } : i))
+          );
+        }
+      }
     } catch {
       await refreshCart();
     }
