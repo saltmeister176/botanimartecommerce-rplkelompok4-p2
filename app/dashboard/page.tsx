@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Package, Clock, CheckCircle, LogOut, Truck, RefreshCw,
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
@@ -56,16 +56,13 @@ function getStatusIcon(status: string) {
 
 export default function Dashboard() {
   const router = useRouter();
-  const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const initialized = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    const supabase = createClient();
     const init = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -77,7 +74,6 @@ export default function Dashboard() {
 
         setUser(user);
 
-        // Fetch profile
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
@@ -85,7 +81,6 @@ export default function Dashboard() {
           .single();
         setProfile(profileData);
 
-        // Fetch orders
         const res = await fetch("/api/orders");
         if (res.ok) {
           const ordersData = await res.json();
@@ -100,11 +95,11 @@ export default function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
-  const supabase = createClient();
-  await supabase.auth.signOut({ scope: 'local' });
-  toast.success("Berhasil logout");
-  window.location.href = "/login";
-};
+    const supabase = createClient();
+    await supabase.auth.signOut({ scope: 'local' });
+    toast.success("Berhasil logout");
+    window.location.href = "/login";
+  };
 
   if (loading) {
     return (
@@ -116,7 +111,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="bg-primary text-primary-foreground py-12">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <div>
@@ -130,7 +124,6 @@ export default function Dashboard() {
             </h1>
             <p className="opacity-80">{user?.email}</p>
           </div>
-
           <button
             onClick={handleLogout}
             className="flex items-center space-x-2 px-4 py-2 bg-white text-primary rounded-lg"
@@ -141,9 +134,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Statistik */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <StatCard icon={<Clock className="h-6 w-6" />} label="Pending"
             value={orders.filter(o => o.status === "pending").length} />
@@ -155,7 +146,6 @@ export default function Dashboard() {
             value={orders.filter(o => o.status === "completed").length} />
         </div>
 
-        {/* Table */}
         <div className="bg-card border rounded-lg overflow-hidden">
           <div className="p-6 border-b flex justify-between items-center">
             <h2 className="text-xl">📦 Riwayat Pesanan</h2>
