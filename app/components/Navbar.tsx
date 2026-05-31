@@ -95,11 +95,8 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16">
 
             {/* LOGO */}
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg">
-                <span className="text-xl">🌿</span>
-              </div>
-              <span className="text-xl text-primary">Botani Mart</span>
+            <Link href="/">
+              <img src="/logo.png" alt="Botani Mart" className="h-10 w-auto object-contain" />
             </Link>
 
             {/* SEARCH — Desktop */}
