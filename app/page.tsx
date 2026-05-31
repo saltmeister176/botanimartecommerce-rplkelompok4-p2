@@ -140,7 +140,7 @@ export default function Landing() {
                 <div className="flex justify-center mx-auto mb-4">
                   {Icon && <Icon className="h-8 w-8" />}
                 </div>
-                <h3>{category.name}</h3>
+                <h3 className="text-center">{category.name}</h3>
               </Link>
             );
           })}

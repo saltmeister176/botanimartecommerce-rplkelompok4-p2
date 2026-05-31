@@ -22,7 +22,7 @@ export interface CartItem {
 interface CartContextType {
   cart: CartItem[];
   loading: boolean;
-  addToCart: (product: CartProduct) => Promise<void>;
+  addToCart: (product: CartProduct, quantity?: number) => Promise<void>;
   removeFromCart: (cartItemId: string) => Promise<void>;
   updateQuantity: (cartItemId: string, quantity: number) => Promise<void>;
   clearCart: () => void;
@@ -50,7 +50,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await fetch("/api/cart");
       if (res.ok) {
         const data = await res.json();
-        // data dari API: { id, user_id, product_id, quantity, products: { name, price, image_url } }
         const mapped: CartItem[] = data.map((item: any) => ({
           id: item.id,
           product_id: item.product_id,
@@ -71,7 +70,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Load cart saat user login/logout
   useEffect(() => {
     refreshCart();
 
@@ -82,13 +80,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
-  const addToCart = async (product: CartProduct) => {
-    // Optimistic update dulu
+  const addToCart = async (product: CartProduct, quantity: number = 1) => {
+    // Optimistic update
     setCart((prev) => {
       const existing = prev.find((i) => i.product_id === product.id);
       if (existing) {
         return prev.map((i) =>
-          i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
       return [
@@ -96,7 +94,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         {
           id: `temp-${product.id}`,
           product_id: product.id,
-          quantity: 1,
+          quantity,
           product,
         },
       ];
@@ -106,16 +104,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: product.id, quantity: 1 }),
+        body: JSON.stringify({ product_id: product.id, quantity }),
       });
 
       if (res.status === 401) {
-        // Belum login - rollback optimistic update
         await refreshCart();
         return;
       }
 
-      // Sync dengan data real dari DB (dapat ID yang benar)
       await refreshCart();
     } catch {
       await refreshCart();
@@ -123,7 +119,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const removeFromCart = async (cartItemId: string) => {
-    // Optimistic update
     setCart((prev) => prev.filter((i) => i.id !== cartItemId));
 
     try {
@@ -143,7 +138,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    // Optimistic update
     setCart((prev) =>
       prev.map((i) => (i.id === cartItemId ? { ...i, quantity } : i))
     );

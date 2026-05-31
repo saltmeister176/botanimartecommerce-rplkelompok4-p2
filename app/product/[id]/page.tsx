@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ShoppingCart, Heart, ArrowLeft, Minus, Plus, Star } from "lucide-react";
+import { ShoppingCart, Heart, ArrowLeft, Minus, Plus } from "lucide-react";
 import { useCart } from "@/app/context/CartContext";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -14,20 +14,20 @@ export default function ProductDetail() {
   const { addToCart } = useCart();
   const { addToWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(1);
-  const [product, setProduct] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/products')
       .then(res => res.json())
       .then(data => {
-        const found = data.find((p: any) => p.id === params?.id)
-        setProduct(found)
-        setLoading(false)
-      })
-  }, [params?.id])
+        const found = data.find((p: any) => p.id === params?.id);
+        setProduct(found);
+        setLoading(false);
+      });
+  }, [params?.id]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   if (!product) {
     return (
@@ -44,25 +44,25 @@ export default function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (product.stock > 0) {
-      // Tambahkan satu per satu sesuai quantity yang dipilih
-      for (let i = 0; i < quantity; i++) {
-        await addToCart({
+      await addToCart(
+        {
           id: product.id,
           name: product.name,
           price: product.price,
           image_url: product.image_url ?? null,
           stock: product.stock,
           category_id: product.category_id ?? null,
-        });
-      }
+        },
+        quantity
+      );
       toast.success(`✓ ${quantity}x ${product.name} berhasil ditambahkan ke keranjang`, {
         description: "Lanjutkan belanja atau cek keranjang Anda",
         duration: 3000,
-      })
+      });
     } else {
-      toast.error("❌ Produk tidak tersedia", { description: "Stok habis" })
+      toast.error("❌ Produk tidak tersedia", { description: "Stok habis" });
     }
-  }
+  };
 
   return (
     <div className="min-h-screen">
@@ -132,7 +132,7 @@ export default function ProductDetail() {
                 <ShoppingCart className="h-5 w-5" />
                 <span>Tambah ke Keranjang</span>
               </button>
-              <button onClick={() => { addToWishlist(product); toast.success("💖 Ditambahkan ke wishlist") }} className="px-6 py-4 border-2 border-primary text-primary rounded-lg">
+              <button onClick={() => { addToWishlist(product); toast.success("💖 Ditambahkan ke wishlist"); }} className="px-6 py-4 border-2 border-primary text-primary rounded-lg">
                 <Heart className="h-5 w-5" />
               </button>
             </div>
