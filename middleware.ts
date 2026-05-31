@@ -2,8 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 const PROTECTED_ROUTES = ["/dashboard", "/profile", "/checkout", "/payment"];
-const ADMIN_ROUTES = ["/admin"];
-const STORE_MANAGER_ROUTES = ["/store-manager"];
+const CONTROL_ROUTES = ["/control", "/admin", "/store-manager"];
 const AUTH_ROUTES = ["/login"];
 
 export async function middleware(request: NextRequest) {
@@ -14,7 +13,7 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
-  // Skip middleware for RSC prefetch requests to improve performance
+  // Skip RSC prefetch requests
   const isRSCRequest = request.headers.get("RSC") === "1";
   if (isRSCRequest) return supabaseResponse;
 
@@ -38,47 +37,50 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
-  // Kalau belum login dan akses protected route → redirect ke login
+  // Redirect /admin and /store-manager to /control
+  if (pathname.startsWith("/admin") || pathname.startsWith("/store-manager")) {
+    return NextResponse.redirect(new URL("/control", request.url));
+  }
+
+  // Protected routes — must be logged in
   const isProtected = PROTECTED_ROUTES.some((r) => pathname.startsWith(r));
   if (isProtected && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Kalau sudah login dan akses halaman login → redirect sesuai is_admin
+  // Login page — redirect based on role if already logged in
   const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
   if (isAuthRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_admin")
+      .select("role")
       .eq("id", user.id)
       .single();
 
-    if (profile?.is_admin === true) {
-      return NextResponse.redirect(new URL("/admin", request.url));
+    const role = profile?.role;
+    if (role === "admin" || role === "store_manager" || role === "superadmin") {
+      return NextResponse.redirect(new URL("/control", request.url));
     }
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Proteksi halaman admin & store-manager: harus login dulu
-  const isAdminRoute = ADMIN_ROUTES.some((r) => pathname.startsWith(r));
-  const isStoreManagerRoute = STORE_MANAGER_ROUTES.some((r) => pathname.startsWith(r));
-
-  if ((isAdminRoute || isStoreManagerRoute) && !user) {
+  // Control page — must be logged in and have correct role
+  const isControlRoute = pathname.startsWith("/control");
+  if (isControlRoute && !user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Cek is_admin untuk halaman admin & store-manager
-  if ((isAdminRoute || isStoreManagerRoute) && user) {
+  if (isControlRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_admin")
+      .select("role")
       .eq("id", user.id)
       .single();
 
-    const isAdmin = profile?.is_admin === true;
+    const role = profile?.role;
+    const allowedRoles = ["admin", "store_manager", "superadmin"];
 
-    // Kedua halaman hanya boleh diakses oleh admin
-    if (!isAdmin) {
+    if (!role || !allowedRoles.includes(role)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
