@@ -67,20 +67,12 @@ export default function ControlPage() {
     const canSeeProducts = role === "admin" || role === "superadmin";
     const canSeeOrders = role === "store_manager" || role === "superadmin";
 
-    if (canSeeProducts) {
-      fetch('/api/products').then(r => r.json()).then(setProducts);
-    }
-    if (canSeeOrders) {
-      setOrdersLoading(true);
-      fetch('/api/orders')
-        .then(r => r.json())
-        .then(setOrders)
-        .finally(() => setOrdersLoading(false));
-    }
-    // dashboard needs orders for everyone
-    if (role === "admin") {
-      fetch('/api/orders').then(r => r.json()).then(setOrders);
-    }
+    fetch('/api/products').then(r => r.json()).then(setProducts);
+    setOrdersLoading(true);
+    fetch('/api/orders')
+      .then(r => r.json())
+      .then(setOrders)
+      .finally(() => setOrdersLoading(false));
   }, [user, role]);
 
   // Fetch users when users tab opened
@@ -199,8 +191,8 @@ export default function ControlPage() {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, show: true },
     { id: "products", label: "Kelola Katalog", icon: Package, show: isAdmin },
     { id: "users", label: "Kontrol Pengguna", icon: Users, show: isAdmin },
-    { id: "orders", label: "Pantau Pesanan", icon: ShoppingCart, show: isStoreManager },
-    { id: "stock", label: "Manajemen Inventaris", icon: Package, show: isStoreManager },
+    { id: "orders", label: "Pantau Pesanan", icon: ShoppingCart, show: true },
+    { id: "stock", label: "Manajemen Inventaris", icon: Package, show: true },
   ].filter(item => item.show);
 
   const roleLabel = role === "superadmin" ? "Super Admin" : role === "admin" ? "Admin" : "Store Manager";
@@ -475,8 +467,8 @@ export default function ControlPage() {
           </div>
         )}
 
-        {/* ── PANTAU PESANAN (store_manager only) ── */}
-        {activeTab === "orders" && isStoreManager && (
+        {/* ── PANTAU PESANAN ── */}
+        {activeTab === "orders" && (
           <div className="space-y-4">
             {ordersLoading && <p className="text-muted-foreground">Loading orders...</p>}
             {!ordersLoading && orders.length === 0 && <p className="text-muted-foreground">No orders yet.</p>}
@@ -491,23 +483,26 @@ export default function ControlPage() {
                   <span className={`px-3 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
                     {getStatusLabel(order.status)}
                   </span>
-                  {order.payment_status === "unpaid" && order.status !== "cancelled" && (
+                  {isStoreManager && order.payment_status === "unpaid" && order.status !== "cancelled" && (
                     <button onClick={() => handleVerifyPayment(order.id)}
                       className="text-sm bg-secondary/10 text-secondary px-3 py-1 rounded hover:bg-secondary/20">
                       Verify Payment
                     </button>
                   )}
-                  {order.payment_status === "paid" && order.status === "processing" && (
+                  {isStoreManager && order.payment_status === "paid" && order.status === "processing" && (
                     <button onClick={() => handleUpdateStatus(order.id, "shipping" as OrderStatus)}
                       className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
                       Mark as Shipping
                     </button>
                   )}
-                  {order.status === "shipping" && (
+                  {isStoreManager && order.status === "shipping" && (
                     <button onClick={() => handleUpdateStatus(order.id, "completed" as OrderStatus)}
                       className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200">
                       Mark as Completed
                     </button>
+                  )}
+                  {!isStoreManager && (
+                    <span className="text-xs text-muted-foreground italic">View only</span>
                   )}
                 </div>
               </div>
@@ -515,8 +510,8 @@ export default function ControlPage() {
           </div>
         )}
 
-        {/* ── MANAJEMEN INVENTARIS (store_manager only) ── */}
-        {activeTab === "stock" && isStoreManager && (
+        {/* ── MANAJEMEN INVENTARIS ── */}
+        {activeTab === "stock" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground">
@@ -552,7 +547,7 @@ export default function ControlPage() {
                       <td className="px-6 py-3 font-medium">{product.name}</td>
                       <td className="px-6 py-3 text-muted-foreground text-xs">{product.categories?.name ?? "-"}</td>
                       <td className="px-6 py-3">
-                        {editingStockId === product.id ? (
+                        {isStoreManager && editingStockId === product.id ? (
                           <div className="flex items-center gap-1">
                             <input type="number" min={0} value={editingStockValue}
                               onChange={e => setEditingStockValue(Number(e.target.value))}
@@ -568,7 +563,9 @@ export default function ControlPage() {
                               {product.stock ?? 0}
                             </span>
                             {(product.stock ?? 0) <= 5 && <span className="text-xs text-red-500">Hampir habis</span>}
-                            <button onClick={() => startEditStock(product)} className="p-1 rounded hover:bg-muted text-muted-foreground"><Pencil className="w-3.5 h-3.5" /></button>
+                            {isStoreManager && (
+                              <button onClick={() => startEditStock(product)} className="p-1 rounded hover:bg-muted text-muted-foreground"><Pencil className="w-3.5 h-3.5" /></button>
+                            )}
                           </div>
                         )}
                       </td>
